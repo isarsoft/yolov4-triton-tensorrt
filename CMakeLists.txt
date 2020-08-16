@@ -20,3 +20,7 @@ endif()
 cuda_add_library(layerplugin SHARED ${PROJECT_SOURCE_DIR}/layers/yololayer.cu ${PROJECT_SOURCE_DIR}/layers/mish.cu)
 # needs to be linked here because triton will not have those libs preloaded!
 target_link_libraries(layerplugin nvinfer cudart)
+
+# EXECUTABLE
+add_executable(main ${PROJECT_SOURCE_DIR}/main.cpp)
+target_link_libraries(main nvinfer cudart layerplugin)

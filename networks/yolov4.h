@@ -86,14 +86,14 @@ namespace yolov4 {
         return lr;
     }
 
-    ICudaEngine* createEngine(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt) {
+    ICudaEngine* createEngine(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt, const std::string &weightsPath) {
         INetworkDefinition* network = builder->createNetworkV2(0U);
 
         // Create input tensor of shape {3, INPUT_H, INPUT_W} with name INPUT_BLOB_NAME
         ITensor* data = network->addInput(INPUT_BLOB_NAME, dt, Dims3{3, INPUT_H, INPUT_W});
         assert(data);
 
-        std::map<std::string, Weights> weightMap = loadWeights("../yolov4.wts");
+        std::map<std::string, Weights> weightMap = loadWeights(weightsPath);
         Weights emptywts{DataType::kFLOAT, nullptr, 0};
 
         // define each layer.

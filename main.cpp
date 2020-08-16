@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     IBuilderConfig* config = builder->createBuilderConfig();
 
     // Create model to populate the network, then set the outputs and create an engine
-    ICudaEngine* engine = yolov4::createEngine(BATCH_SIZE, builder, config, DataType::kFLOAT);
+    ICudaEngine* engine = yolov4::createEngine(BATCH_SIZE, builder, config, DataType::kFLOAT, "../yolov4.wts");
     assert(engine != nullptr);
 
     // Serialize the engine

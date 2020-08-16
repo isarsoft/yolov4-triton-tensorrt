@@ -24,7 +24,6 @@ namespace yolov4 {
         float *mean = (float*)weightMap[lname + ".running_mean"].values;
         float *var = (float*)weightMap[lname + ".running_var"].values;
         int len = weightMap[lname + ".running_var"].count;
-        std::cout << "len " << len << std::endl;
 
         float *scval = reinterpret_cast<float*>(malloc(sizeof(float) * len));
         for (int i = 0; i < len; i++) {
@@ -53,7 +52,6 @@ namespace yolov4 {
     }
 
     ILayer* convBnMish(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, ITensor& input, int outch, int ksize, int s, int p, int linx) {
-        std::cout << linx << std::endl;
         Weights emptywts{DataType::kFLOAT, nullptr, 0};
         IConvolutionLayer* conv1 = network->addConvolutionNd(input, outch, DimsHW{ksize, ksize}, weightMap["module_list." + std::to_string(linx) + ".Conv2d.weight"], emptywts);
         assert(conv1);
@@ -71,7 +69,6 @@ namespace yolov4 {
     }
 
     ILayer* convBnLeaky(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, ITensor& input, int outch, int ksize, int s, int p, int linx) {
-        std::cout << linx << std::endl;
         Weights emptywts{DataType::kFLOAT, nullptr, 0};
         IConvolutionLayer* conv1 = network->addConvolutionNd(input, outch, DimsHW{ksize, ksize}, weightMap["module_list." + std::to_string(linx) + ".Conv2d.weight"], emptywts);
         assert(conv1);
@@ -332,7 +329,6 @@ namespace yolov4 {
         auto yolo = network->addPluginV2(inputTensors_yolo, 3, *pluginObj);
 
         yolo->getOutput(0)->setName(OUTPUT_BLOB_NAME);
-        std::cout << "set name out" << std::endl;
         network->markOutput(*yolo->getOutput(0));
 
         // Build engine
@@ -342,7 +338,6 @@ namespace yolov4 {
         config->setFlag(BuilderFlag::kFP16);
     #endif
         ICudaEngine* engine = builder->buildEngineWithConfig(*network, *config);
-        std::cout << "build out" << std::endl;
 
         // Don't need the network any more
         network->destroy();

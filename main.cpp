@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
 
     std::cout << "Creating model" << std::endl;
     // Create model to populate the network, then set the outputs and create an engine
-    ICudaEngine* engine = yolov4::createEngine(BATCH_SIZE, builder, config, DataType::kFLOAT, "../yolov4.wts");
+    ICudaEngine* engine = yolov4::createEngine(BATCH_SIZE, builder, config, DataType::kFLOAT, "yolov4.wts");
     assert(engine != nullptr);
 
     std::cout << "Serializing model to engine file" << std::endl;

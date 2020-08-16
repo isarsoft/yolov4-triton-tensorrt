@@ -124,7 +124,9 @@ The following benchmarks were taken on a system with `2 x Nvidia 2080 TI` GPUs a
   - [ ] Implement calibrator
   - [ ] Add support for INT8 in custom layers
   - [ ] Optional: use ReLU instead of Mish for layer fusion speedup
-- [ ] Add Triton client code (not sure if this will be public sourced yet)
+- [ ] General optimizations (using [this darknet->onnx->tensorrt export](https://github.com/Tianxiaomo/pytorch-YOLOv4#5-onnx2tensorrt-evolving) with --best flag gives 572 FPS (batchsize 8) and 392 FPS (batchsize 1) without full INT8 calibration)
+- [ ] YOLOv4 tiny (example is [here](https://github.com/tjuskyzhang/yolov4-tiny-tensorrt))
+- [ ] Add Triton client code in python
 - [ ] Add image pre and postprocessing code
 
 INT8 will give another big boost (maybe 2x - 3x ?) in performance, as the Tensor Cores on Nvidia GPUs will be activated. A first naive implementation did not result in performance improvements, because the custom layers do not support INT8 and have FP32 outputs, which breaks the optimization at multiple stages in the network. Optionally we can deactivate Mish and use standard ReLU instead. The weights and config for this are in the darknet repo.

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "NvInfer.h"
+#include "NvInferPlugin.h"
 
 namespace nvinfer1
 {
@@ -102,5 +103,7 @@ namespace nvinfer1
             static PluginFieldCollection mFC;
             static std::vector<PluginField> mPluginAttributes;
     };
+
+    REGISTER_TENSORRT_PLUGIN(MishPluginCreator);
 };
 #endif 

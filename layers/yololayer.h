@@ -6,6 +6,7 @@
 #include <string.h>
 #include <cublas_v2.h>
 #include "NvInfer.h"
+#include "NvInferPlugin.h"
 #include "../utils/profiler.h"
 #include <iostream>
 
@@ -153,8 +154,7 @@ namespace nvinfer1
             static std::vector<PluginField> mPluginAttributes;
     };
 
-
-
+    REGISTER_TENSORRT_PLUGIN(YoloPluginCreator);
 };
 
 #endif 

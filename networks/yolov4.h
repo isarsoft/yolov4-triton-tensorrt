@@ -8,6 +8,8 @@
 
 using namespace nvinfer1;
 
+#define USE_FP16
+
 namespace yolov4 {
 
     // stuff we know about the network and the input/output blobs

@@ -130,8 +130,6 @@ The following benchmarks were taken on a system with `2 x Nvidia 2080 TI` GPUs a
 - [ ] Add [BatchedNMS](https://github.com/NVIDIA/TensorRT/tree/master/plugin/batchedNMSPlugin) to move NMS to GPU
 - [ ] Add dynamic batch size support
 
-INT8 will give another big boost (maybe 2x - 3x ?) in performance, as the Tensor Cores on Nvidia GPUs will be activated. A first naive implementation did not result in performance improvements, because the custom layers do not support INT8 and have FP32 outputs, which breaks the optimization at multiple stages in the network. Optionally we can deactivate Mish and use standard ReLU instead. The weights and config for this are in the darknet repo.
-
 ## Acknowledgments
 
 The initial codebase is from [Wang Xinyu](https://github.com/wang-xinyu) in his [TensorRTx](https://github.com/wang-xinyu/tensorrtx) repo. He had the idea to implement YOLO using only the TensorRT API and its very nice he shares this code. This repo has the purpose to deploy this engine and plugin to Triton and to add additional perfomance improvements to the TensorRT engine.

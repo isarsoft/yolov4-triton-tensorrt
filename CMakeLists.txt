@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-PROJECT(yolov4-triton-tensorrt VERSION 1.0.0 LANGUAGES CXX)
+PROJECT(yolov4-triton-tensorrt VERSION 1.1.0 LANGUAGES CXX)
 
 # CUDA
 find_package(CUDA REQUIRED)

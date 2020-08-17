@@ -124,6 +124,7 @@ The following benchmarks were taken on a system with `2 x Nvidia 2080 TI` GPUs a
 - [ ] INT8 optimization
 - [ ] General optimizations (using [this darknet->onnx->tensorrt export](https://github.com/Tianxiaomo/pytorch-YOLOv4#5-onnx2tensorrt-evolving) with --best flag gives 572 FPS (batchsize 8) and 392 FPS (batchsize 1) without full INT8 calibration)
 - [ ] YOLOv4 tiny (example is [here](https://github.com/tjuskyzhang/yolov4-tiny-tensorrt))
+- [ ] YOLOv5
 - [ ] Add Triton client code in python
 - [ ] Add image pre and postprocessing code
 - [ ] Add mAP benchmark

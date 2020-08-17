@@ -2,7 +2,6 @@
 #include "NvInferPlugin.h"
 
 #include "../layers/yololayer.h"
-#include "../layers/mish.h"
 
 #include "../utils/weights.h"
 

@@ -56,13 +56,13 @@ cd /workspace/tensorrt/bin
 [I] Warmup completed 1 queries over 200 ms
 [I] Timing trace has 204 queries over 3.00185 s
 [I] Trace averages of 10 runs:
-[I] Average on 10 runs - GPU latency: 14.5469 ms - Host latency: 16.1718 ms (end to end 16.1964 ms, enqueue 2.69769 ms)
-[I] Average on 10 runs - GPU latency: 13.1222 ms - Host latency: 14.7452 ms (end to end 14.7681 ms, enqueue 2.89363 ms)
+[I] Average on 10 runs - GPU latency: 7.8773 ms - Host latency: 9.45764 ms (end to end 9.48074 ms, enqueue 1.98274 ms)
+[I] Average on 10 runs - GPU latency: 7.73803 ms - Host latency: 9.3154 ms (end to end 9.33945 ms, enqueue 2.02845 ms)
 (...)
 [I] GPU Compute
-[I] min: 12.241 ms
-[I] max: 15.0692 ms
-[I] mean: 13.1447 ms
+[I] min: 7.01465 ms
+[I] max: 9.11838 ms
+[I] mean: 7.79672 ms
 ```
 
 ## Deploy to Triton Inference Server
@@ -103,17 +103,17 @@ docker run -it --ipc=host --net=host nvcr.io/nvidia/tritonserver:20.06-py3-clien
 cd install/bin
 ./perf_client (...argumentshere)
 # Example
-./perf_client -m yolov4 -u 127.0.0.1:8001 -i grpc --concurrency-range 4
+./perf_client -m yolov4 -u 127.0.0.1:8001 -i grpc --shared-memory system --concurrency-range 4
 ```
 
 The following benchmarks were taken on a system with `2 x Nvidia 2080 TI` GPUs and an `AMD Ryzen 9 3950X` 16 Core CPU and with batchsize 1.
 
 | concurrency / precision | FP32                                | FP16                                |
 |-------------------------|-------------------------------------|-------------------------------------|
-| 1                       | 44 infer/sec, latency 22633 usec    | 62.4 infer/sec, latency 15986 usec  |
-| 2                       | 84.2 infer/sec, latency 23677 usec  | 136.2 infer/sec, latency 14675 usec |
-| 4                       | 100.2 infer/sec, latency 39946 usec | 154.2 infer/sec, latency 19443 usec |
-| 8                       | 99.2 infer/sec, latency 80552 usec  | 171 infer/sec, latency 46780 usec   |
+| 1                       | 53 infer/sec, latency 18879 usec    | 116 infer/sec, latency 8611 usec    |
+| 2                       | 94.6 infer/sec, latency 21170 usec  | 224 infer/sec, latency 8930 usec    |
+| 4                       | 107 infer/sec, latency 37425 usec   | 270.8 infer/sec, latency 14768 usec |
+| 8                       | 106.8 infer/sec, latency 74907 usec | 272 infer/sec, latency 29424 usec   |
 
 
 ## Tasks in this repo

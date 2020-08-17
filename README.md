@@ -120,6 +120,7 @@ The following benchmarks were taken on a system with `2 x Nvidia 2080 TI` GPUs a
 
 - [x] Layer plugin working with trtexec and Triton
 - [x] FP16 optimization
+- [ ] Remove MISH plugin and replace by standard activation layers (see [3b in this blog](https://jkjung-avt.github.io/tensorrt-yolov4/))
 - [ ] INT8 optimization
   - [ ] Implement calibrator
   - [ ] Add support for INT8 in custom layers
@@ -128,9 +129,11 @@ The following benchmarks were taken on a system with `2 x Nvidia 2080 TI` GPUs a
 - [ ] YOLOv4 tiny (example is [here](https://github.com/tjuskyzhang/yolov4-tiny-tensorrt))
 - [ ] Add Triton client code in python
 - [ ] Add image pre and postprocessing code
+- [ ] Add mAP benchmark
+- [ ] Add [BatchedNMS](https://github.com/NVIDIA/TensorRT/tree/master/plugin/batchedNMSPlugin) to move NMS to GPU
 
 INT8 will give another big boost (maybe 2x - 3x ?) in performance, as the Tensor Cores on Nvidia GPUs will be activated. A first naive implementation did not result in performance improvements, because the custom layers do not support INT8 and have FP32 outputs, which breaks the optimization at multiple stages in the network. Optionally we can deactivate Mish and use standard ReLU instead. The weights and config for this are in the darknet repo.
 
 ## Acknowledgments
 
-The initial codebase is from [Wang Xinyu](https://github.com/wang-xinyu) in his [TensorRTx](https://github.com/wang-xinyu/tensorrtx) repo. He had the idea to implement YOLO using only the TensorRT API and its very nice he shares this code. This repo has the purpose to deploy this engine and plugin to Triton and to add additional perfomance improvements as well as benchmarks.
+The initial codebase is from [Wang Xinyu](https://github.com/wang-xinyu) in his [TensorRTx](https://github.com/wang-xinyu/tensorrtx) repo. He had the idea to implement YOLO using only the TensorRT API and its very nice he shares this code. This repo has the purpose to deploy this engine and plugin to Triton and to add additional perfomance improvements to the TensorRT engine.

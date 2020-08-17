@@ -62,12 +62,11 @@ namespace yolov4 {
 
         IScaleLayer* bn1 = addBatchNorm2d(network, weightMap, *conv1->getOutput(0), "module_list." + std::to_string(linx) + ".BatchNorm2d", 1e-4);
 
-        auto creator = getPluginRegistry()->getPluginCreator("Mish_TRT", "1");
-        const PluginFieldCollection* pluginData = creator->getFieldNames();
-        IPluginV2 *pluginObj = creator->createPlugin(("mish" + std::to_string(linx)).c_str(), pluginData);
-        ITensor* inputTensors[] = {bn1->getOutput(0)};
-        auto mish = network->addPluginV2(&inputTensors[0], 1, *pluginObj);
-        return mish;
+        auto mish_softplus = network->addActivation(*bn1->getOutput(0), ActivationType::kSOFTPLUS);
+        auto mish_tanh = network->addActivation(*mish_softplus->getOutput(0), ActivationType::kTANH);
+        auto mish_mul = network->addElementWise(*mish_tanh->getOutput(0), *bn1->getOutput(0), ElementWiseOperation::kPROD);
+
+        return mish_mul;
     }
 
     ILayer* convBnLeaky(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, ITensor& input, int outch, int ksize, int s, int p, int linx) {

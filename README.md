@@ -145,14 +145,14 @@ The following benchmarks were taken on a system with `2 x Nvidia 2080 TI` GPUs a
 - [x] FP16 optimization
 - [x] Remove MISH plugin and replace by standard activation layers (see [3b in this blog](https://jkjung-avt.github.io/tensorrt-yolov4/) for the idea)
 - [ ] INT8 optimization
-- [ ] General optimizations (using [this darknet->onnx->tensorrt export](https://github.com/Tianxiaomo/pytorch-YOLOv4#5-onnx2tensorrt-evolving) with --best flag gives 572 FPS (batchsize 8) and 392 FPS (batchsize 1) without full INT8 calibration)
+- [x] General optimizations (using [this darknet->onnx->tensorrt export](https://github.com/Tianxiaomo/pytorch-YOLOv4#5-onnx2tensorrt-evolving) with --best flag gives 572 FPS (batchsize 8) and 392 FPS (batchsize 1) without full INT8 calibration)
 - [ ] YOLOv4 tiny (example is [here](https://github.com/tjuskyzhang/yolov4-tiny-tensorrt))
 - [ ] YOLOv5
 - [ ] Add Triton client code in python
 - [ ] Add image pre and postprocessing code
 - [ ] Add mAP benchmark
 - [ ] Add [BatchedNMS](https://github.com/NVIDIA/TensorRT/tree/master/plugin/batchedNMSPlugin) to move NMS to GPU
-- [ ] Add dynamic batch size support
+- [x] Add dynamic batch size support
 
 ## Acknowledgments
 

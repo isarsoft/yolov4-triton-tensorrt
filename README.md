@@ -119,15 +119,25 @@ cd install/bin
 ./perf_client -m yolov4 -u 127.0.0.1:8001 -i grpc --shared-memory system --concurrency-range 4
 ```
 
-The following benchmarks were taken on a system with `2 x Nvidia 2080 TI` GPUs and an `AMD Ryzen 9 3950X` 16 Core CPU and with batchsize 1.
+The following benchmarks were taken on a system with `2 x Nvidia 2080 TI` GPUs and an `AMD Ryzen 9 3950X` 16 Core CPU.
+
+##### Batchsize 1
 
 | concurrency / precision | FP32                                | FP16                                |
 |-------------------------|-------------------------------------|-------------------------------------|
-| 1                       | 53 infer/sec, latency 18879 usec    | 116 infer/sec, latency 8611 usec    |
-| 2                       | 94.6 infer/sec, latency 21170 usec  | 224 infer/sec, latency 8930 usec    |
-| 4                       | 107 infer/sec, latency 37425 usec   | 270.8 infer/sec, latency 14768 usec |
-| 8                       | 106.8 infer/sec, latency 74907 usec | 272 infer/sec, latency 29424 usec   |
+| 1                       | 62.8 infer/sec, latency 15910 usec  | 138.4 infer/sec, latency 7222 usec  |
+| 2                       | 118.8 infer/sec, latency 16855 usec | 286.6 infer/sec, latency 6980 usec  |
+| 4                       | 127.4 infer/sec, latency 31451 usec | 323.6 infer/sec, latency 12355 usec |
+| 8                       | 127.6 infer/sec, latency 62717 usec | 323.2 infer/sec, latency 24761 usec |
 
+##### Batchsize 8
+
+| concurrency / precision | FP32                                 | FP16                                 |
+|-------------------------|--------------------------------------|--------------------------------------|
+| 1                       | 78.4 infer/sec, latency 103571 usec  | 235.2 infer/sec, latency 33990 usec  |
+| 2                       | 152 infer/sec, latency 104336 usec   | 484.8 infer/sec, latency 33043 usec  |
+| 4                       | 158.4 infer/sec, latency 202114 usec | 536 infer/sec, latency 59674 usec    |
+| 8                       | 156.8 infer/sec, latency 405299 usec | 540.8 infer/sec, latency 118868 usec |
 
 ## Tasks in this repo
 

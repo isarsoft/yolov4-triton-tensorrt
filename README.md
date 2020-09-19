@@ -53,16 +53,16 @@ cd /workspace/tensorrt/bin
 ```
 (...)
 [I] Starting inference threads
-[I] Warmup completed 1 queries over 200 ms
+[I] Warmup completed 1 queries over 200 ms*
 [I] Timing trace has 204 queries over 3.00185 s
 [I] Trace averages of 10 runs:
-[I] Average on 10 runs - GPU latency: 7.8773 ms - Host latency: 9.45764 ms (end to end 9.48074 ms, enqueue 1.98274 ms)
-[I] Average on 10 runs - GPU latency: 7.73803 ms - Host latency: 9.3154 ms (end to end 9.33945 ms, enqueue 2.02845 ms)
+[I] Average on 10 runs - GPU latency: 7.8773 ms* - Host latency: 9.45764 ms* (end to end 9.48074 ms*, enqueue 1.98274 ms*
+[I] Average on 10 runs - GPU latency: 7.73803 ms* - Host latency: 9.3154 ms* (end to end 9.33945 ms*, enqueue 2.02845 ms*
 (...)
 [I] GPU Compute
-[I] min: 7.01465 ms
-[I] max: 9.11838 ms
-[I] mean: 7.79672 ms
+[I] min: 7.01465 ms*
+[I] max: 9.11838 ms*
+[I] mean: 7.79672 ms*
 ```
 
 ## Deploy to Triton Inference Server
@@ -119,25 +119,28 @@ cd install/bin
 ./perf_client -m yolov4 -u 127.0.0.1:8001 -i grpc --shared-memory system --concurrency-range 4
 ```
 
-The following benchmarks were taken on a system with `2 x Nvidia 2080 TI` GPUs and an `AMD Ryzen 9 3950X` 16 Core CPU.
+The following benchmarks were taken on a system with `2 x NVIDIA 2080 Ti` GPUs and an `AMD Ryzen 9 3950X` 16 Core CPU.
 
-##### Batchsize 1
+Concurrency is the number of concurrent clients invoking inference on the Triton server via grpc.
+Results are total frames per second (FPS) of all clients combined and average latency in milliseconds for every single respective client.
 
-| concurrency / precision | FP32                                | FP16                                |
-|-------------------------|-------------------------------------|-------------------------------------|
-| 1                       | 62.8 infer/sec, latency 15910 usec  | 138.4 infer/sec, latency 7222 usec  |
-| 2                       | 118.8 infer/sec, latency 16855 usec | 286.6 infer/sec, latency 6980 usec  |
-| 4                       | 127.4 infer/sec, latency 31451 usec | 323.6 infer/sec, latency 12355 usec |
-| 8                       | 127.6 infer/sec, latency 62717 usec | 323.2 infer/sec, latency 24761 usec |
+##### 2x NVIDIA GeForce RTX 2080 Ti
 
-##### Batchsize 8
+| concurrency | FP32 B=1             | FP32 B=4             | FP32 B=8            | FP16 B=1                 | FP16 B=4             | FP16 B=8                 |
+|:-----------:|:--------------------:|:--------------------:|:-------------------:|:------------------------:|:--------------------:|:------------------------:|
+| 1           |  62.8 FPS  *15.9 ms* |  73.6 FPS  *54.1 ms* |  78.4 FPS  *103 ms* | 138.4 FPS  *7.22 ms*     | 219.2 FPS  *18.2 ms* | 235.2 FPS  *33.9 ms*     |
+| 2           | 118.8 FPS  *16.8 ms* | 143.2 FPS  *55.9 ms* | 152.0 FPS  *104 ms* | 286.6 FPS  **_6.98 ms_** | 438.4 FPS  *18.2 ms* | 484.8 FPS  *33.0 ms*     |
+| 4           | 127.4 FPS  *31.4 ms* | 146.4 FPS  *109 ms*  | 158.4 FPS  *202 ms* | 323.6 FPS  *12.3 ms*     | 479.2 FPS  *33.3 ms* | 536.0 FPS  *59.6 ms*     |
+| 8           | 127.6 FPS  *62.7 ms* | 144.8 FPS  *220 ms*  | 156.8 FPS  *405 ms* | 323.2 FPS  *24.7 ms*     | 475.2 FPS  *67.3 ms* | **540.8 FPS**  *118 ms*  |
 
-| concurrency / precision | FP32                                 | FP16                                 |
-|-------------------------|--------------------------------------|--------------------------------------|
-| 1                       | 78.4 infer/sec, latency 103571 usec  | 235.2 infer/sec, latency 33990 usec  |
-| 2                       | 152 infer/sec, latency 104336 usec   | 484.8 infer/sec, latency 33043 usec  |
-| 4                       | 158.4 infer/sec, latency 202114 usec | 536 infer/sec, latency 59674 usec    |
-| 8                       | 156.8 infer/sec, latency 405299 usec | 540.8 infer/sec, latency 118868 usec |
+##### 1x NVIDIA GeForce RTX 2080 Ti (by setting --gpus 1)
+
+| concurrency | FP32, B=1           | FP32, B=4           | FP32, B=8          | FP16, B=1                | FP16, B=4            | FP16, B=8                |
+|:-----------:|:-------------------:|:-------------------:|:------------------:|:------------------------:|:--------------------:|:------------------------:|
+| 1           | 57.6 FPS  *17.3 ms* | 68.0 FPS  *58.5 ms* | 72.0 FPS  *111 ms* | 125.4 FPS  **_7.96 ms_** | 189.6 FPS  *21.0 ms* | 208.0 FPS  *38.3 ms*     |
+| 2           | 59.2 FPS  *33.7 ms* | 69.6 FPS  *114 ms*  | 73.6 FPS  *217 ms* | 137.6 FPS  *14.5 ms*     | 207.2 FPS  *38.5 ms* | **228.8 FPS**  *70.3 ms* |
+| 4           | 58.6 FPS  *68.1 ms* | 69.6 FPS  *229 ms*  | 72.0 FPS  *436 ms* | 137.0 FPS  *29.2 ms*     | 206.4 FPS  *77.3 ms* | 227.2 FPS  *141 ms*      |
+| 8           | 58.4 FPS  *136 ms*  | 68.8 FPS  *460 ms*  | 72.0 FPS  *874 ms* | 136.8 FPS  *58.4 ms*     | 206.4 FPS  *154 ms*  | 227.2 FPS  *282 ms*      |
 
 ## Tasks in this repo
 
@@ -145,13 +148,13 @@ The following benchmarks were taken on a system with `2 x Nvidia 2080 TI` GPUs a
 - [x] FP16 optimization
 - [x] Remove MISH plugin and replace by standard activation layers (see [3b in this blog](https://jkjung-avt.github.io/tensorrt-yolov4/) for the idea)
 - [ ] INT8 optimization
-- [x] General optimizations (using [this darknet->onnx->tensorrt export](https://github.com/Tianxiaomo/pytorch-YOLOv4#5-onnx2tensorrt-evolving) with --best flag gives 572 FPS (batchsize 8) and 392 FPS (batchsize 1) without full INT8 calibration)
+- [x] General optimizations (using [this darknet->onnx->tensorrt export](https://github.com/Tianxiaomo/pytorch-YOLOv4#5-onnx2tensorrt-evolving) with --best flag gives 572 FPS / (batchsize 8) and 392 FPS / (batchsize 1) without full INT8 calibration)
 - [ ] YOLOv4 tiny (example is [here](https://github.com/tjuskyzhang/yolov4-tiny-tensorrt))
 - [ ] YOLOv5
 - [ ] Add Triton client code in python
 - [ ] Add image pre and postprocessing code
 - [ ] Add mAP benchmark
-- [ ] Add [BatchedNMS](https://github.com/NVIDIA/TensorRT/tree/master/plugin/batchedNMSPlugin) to move NMS to GPU
+- [ ] Add [BatchedNms*](https://github.com/NVIDIA/TensorRT/tree/master/plugin/batchedNms*Plugin) to move Nms* to GPU
 - [x] Add dynamic batch size support
 
 ## Acknowledgments

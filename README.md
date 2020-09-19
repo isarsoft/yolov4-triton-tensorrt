@@ -18,10 +18,10 @@ Run the following to get a running TensorRT container with our repo code:
 ```bash
 cd yourworkingdirectoryhere
 git clone git@github.com:isarsoft/yolov4-triton-tensorrt.git
-docker run --gpus all -it --rm -v $(pwd)/yolov4-triton-tensorrt:/yolov4-triton-tensorrt nvcr.io/nvidia/tensorrt:20.06-py3
+docker run --gpus all -it --rm -v $(pwd)/yolov4-triton-tensorrt:/yolov4-triton-tensorrt nvcr.io/nvidia/tensorrt:20.08-py3
 ```
 
-Docker will download the TensorRT container. You need to select the version (in this case 20.06) according to the version of Triton that you want to use later to ensure the TensorRT versions match. Matching NGC version tags use the same TensorRT version.
+Docker will download the TensorRT container. You need to select the version (in this case 20.08) according to the version of Triton that you want to use later to ensure the TensorRT versions match. Matching NGC version tags use the same TensorRT version.
 
 Inside the container run the following to compile our code:
 
@@ -83,7 +83,7 @@ cp yolov4-triton-tensorrt/build/liblayerplugin.so triton-deploy/plugins/
 Now we can start Triton with this model repository:
 
 ```bash
-docker run --gpus all --rm --shm-size=1g --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -p8000:8000 -p8001:8001 -p8002:8002 -v$(pwd)/triton-deploy/models:/models -v$(pwd)/triton-deploy/plugins:/plugins --env LD_PRELOAD=/plugins/liblayerplugin.so nvcr.io/nvidia/tritonserver:20.06-py3 tritonserver --model-repository=/models --strict-model-config=false --grpc-infer-allocation-pool-size=16 --log-verbose 1
+docker run --gpus all --rm --shm-size=1g --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -p8000:8000 -p8001:8001 -p8002:8002 -v$(pwd)/triton-deploy/models:/models -v$(pwd)/triton-deploy/plugins:/plugins --env LD_PRELOAD=/plugins/liblayerplugin.so nvcr.io/nvidia/tritonserver:20.08-py3 tritonserver --model-repository=/models --strict-model-config=false --grpc-infer-allocation-pool-size=16 --log-verbose 1
 ```
 
 This should give us a running Triton instance with our yolov4 model loaded. You can check out what to do next in the [Triton Documentation](https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/index.html).
@@ -99,7 +99,7 @@ To benchmark the performance of the model, we can run [Tritons Performance Clien
 To run the perf_client, get the Triton Client SDK docker container.
 
 ```bash
-docker run -it --ipc=host --net=host nvcr.io/nvidia/tritonserver:20.06-py3-clientsdk /bin/bash
+docker run -it --ipc=host --net=host nvcr.io/nvidia/tritonserver:20.08-py3-clientsdk /bin/bash
 cd install/bin
 ./perf_client (...argumentshere)
 # Example

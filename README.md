@@ -72,7 +72,7 @@ We need to create our model repository file structure first:
 ```bash
 # Create model repository
 cd yourworkingdirectoryhere
-mkdir -p triton-deploy/model_repository/yolov4/1/
+mkdir -p triton-deploy/models/yolov4/1/
 mkdir triton-deploy/plugins
 
 # Copy engine and plugins

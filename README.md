@@ -96,7 +96,20 @@ Triton has a very easy C++, Go and Python SDK with examples on how to run infere
 
 To benchmark the performance of the model, we can run [Tritons Performance Client](https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/optimization.html#perf-client).
 
-To run the perf_client, get the Triton Client SDK docker container.
+To run the perf_client, install the Triton Python SDK (tritonclient), which ships with perf_client as a preinstalled binary.
+
+```bash
+sudo apt update
+sudo apt install libb64-dev
+
+pip install nvidia-pyindex
+pip install tritonclient[all]
+
+# Example
+perf_client -m yolov4 -u 127.0.0.1:8001 -i grpc --shared-memory system --concurrency-range 4
+```
+
+Alternatively you can get the Triton Client SDK docker container.
 
 ```bash
 docker run -it --ipc=host --net=host nvcr.io/nvidia/tritonserver:20.08-py3-clientsdk /bin/bash

@@ -43,7 +43,7 @@ def nms(boxes, box_confidences, nms_threshold=0.5):
         keep = np.array(keep).astype(int)
         return keep
 
-def postprocess(buffer, image_width, image_height, conf_threshold=0.95):
+def postprocess(buffer, image_width, image_height, conf_threshold=0.9):
     detected_objects = []
     img_scale = [image_width / INPUT_WIDTH, image_height / INPUT_HEIGHT, image_width / INPUT_WIDTH, image_height / INPUT_HEIGHT]
     num_bboxes = int(buffer[0, 0, 0, 0])

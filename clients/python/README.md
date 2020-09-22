@@ -1,19 +1,21 @@
 ```
-usage: client.py [-h] [-m MODEL] [-u URL] [-i] [-v] [-t CLIENT_TIMEOUT] [-s]
-                 [-r ROOT_CERTIFICATES] [-p PRIVATE_KEY]
-                 [-x CERTIFICATE_CHAIN]
-                 {dummy,image,video}
+usage: client.py [-h] [-m MODEL] [-u URL] [-o OUT] [-i] [-v]
+                 [-t CLIENT_TIMEOUT] [-s] [-r ROOT_CERTIFICATES]
+                 [-p PRIVATE_KEY] [-x CERTIFICATE_CHAIN]
+                 {dummy,image,video} [input]
 
 positional arguments:
   {dummy,image,video}   Run mode. 'dummy' will send an emtpy buffer to the
                         server to test if inference works. 'image' will
                         process an image. 'video' will process a video.
+  input                 Input file to load from in image or video mode
 
 optional arguments:
   -h, --help            show this help message and exit
   -m MODEL, --model MODEL
                         Inference model name. Default is yolov4.
   -u URL, --url URL     Inference server URL. Default is localhost:8001.
+  -o OUT, --out OUT     Write output into file instead of displaying it.
   -i, --model-info      Print model status, configuration and statistics
   -v, --verbose         Enable verbose client output
   -t CLIENT_TIMEOUT, --client-timeout CLIENT_TIMEOUT

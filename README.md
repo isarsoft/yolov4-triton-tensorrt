@@ -90,7 +90,12 @@ This should give us a running Triton instance with our yolov4 model loaded. You 
 
 ## How to run model in your code
 
-Triton has a very easy C++, Go and Python SDK with examples on how to run inference when the model is deployed on the server. It supports shared memory for basically zero copy latency when you run the code on the same device. This repo will be extended with a full implementation of such a client in the future, but it's really not hard to do by looking at the examples: https://github.com/NVIDIA/triton-inference-server/tree/master/src/clients
+This repo contains a python client. More information [here](clients/python).
+```bash
+python client.py -o data/dog_result.jpg image data/dog.jpg
+```
+
+![exemplary output result](clients/python/data/dog_result.jpg)
 
 ## Benchmark
 
@@ -151,8 +156,8 @@ Results are total frames per second (FPS) of all clients combined and average la
 - [x] General optimizations (using [this darknet->onnx->tensorrt export](https://github.com/Tianxiaomo/pytorch-YOLOv4#5-onnx2tensorrt-evolving) with --best flag gives 572 FPS / (batchsize 8) and 392 FPS / (batchsize 1) without full INT8 calibration)
 - [ ] YOLOv4 tiny (example is [here](https://github.com/tjuskyzhang/yolov4-tiny-tensorrt))
 - [ ] YOLOv5
-- [ ] Add Triton client code in python
-- [ ] Add image pre and postprocessing code
+- [x] Add Triton client code in python
+- [x] Add image pre and postprocessing code
 - [ ] Add mAP benchmark
 - [ ] Add [BatchedNms*](https://github.com/NVIDIA/TensorRT/tree/master/plugin/batchedNms*Plugin) to move Nms* to GPU
 - [x] Add dynamic batch size support

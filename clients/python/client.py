@@ -34,6 +34,12 @@ if __name__ == '__main__':
                         required=False,
                         default='localhost:8001',
                         help='Inference server URL. Default is localhost:8001.')
+    parser.add_argument('-o',
+                        '--out',
+                        type=str,
+                        required=False,
+                        default='',
+                        help='Write output into file instead of displaying it.')
     parser.add_argument('-i',
                         '--model-info',
                         action="store_true",
@@ -205,6 +211,10 @@ if __name__ == '__main__':
             input_image = render_filled_box(input_image, (box.x1 - 3, box.y1 - 3, box.x1 + size[0], box.y1 + size[1]), color=(220, 220, 220))
             input_image = render_text(input_image, COCOLabels(box.classID).name, (box.x1, box.y1), color=(30, 30, 30), normalised_scaling=0.5)
 
-        cv2.imshow('image', input_image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        if FLAGS.out:
+            cv2.imwrite(FLAGS.out, input_image)
+            print(f"Saved result to {FLAGS.out}")
+        else:
+            cv2.imshow('image', input_image)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()

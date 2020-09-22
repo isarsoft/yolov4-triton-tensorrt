@@ -1,3 +1,26 @@
+Get nvidia-pyindex to get access to the tritonclient packages:
+
+```bash
+pip install --user nvidia-pyindex
+```
+
+Create new conda environment:
+
+```
+conda env create -f environment.yml
+conda activate yolov4-triton
+```
+
+Make sure triton server is running. Run the client:
+
+```bash
+python client.py image data/dog.jpg
+```
+
+![exemplary output result](data/dog_result.jpg)
+
+Full features of this client:
+
 ```
 usage: client.py [-h] [-m MODEL] [-u URL] [-o OUT] [-i] [-v]
                  [-t CLIENT_TIMEOUT] [-s] [-r ROOT_CERTIFICATES]

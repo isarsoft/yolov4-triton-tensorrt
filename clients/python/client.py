@@ -40,6 +40,12 @@ if __name__ == '__main__':
                         required=False,
                         default='',
                         help='Write output into file instead of displaying it.')
+    parser.add_argument('-f',
+                        '--fps',
+                        type=float,
+                        required=False,
+                        default=24.0,
+                        help='Video output fps. Default 24.0 FPS.')
     parser.add_argument('-i',
                         '--model-info',
                         action="store_true",
@@ -218,3 +224,69 @@ if __name__ == '__main__':
             cv2.imshow('image', input_image)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
+
+    # VIDEO MODE
+    if FLAGS.mode == 'video':
+        print("Running in 'video' mode")
+        if not FLAGS.input:
+            print("FAILED: no input video")
+            sys.exit(1)
+
+        inputs = []
+        outputs = []
+        inputs.append(grpcclient.InferInput('data', [1, 3, 608, 608], "FP32"))
+        outputs.append(grpcclient.InferRequestedOutput('prob'))
+
+        print("Opening input video stream...")
+        cap = cv2.VideoCapture(FLAGS.input)
+        if not cap.isOpened():
+            print(f"FAILED: cannot open video {FLAGS.input}")
+            sys.exit(1)
+
+        counter = 0
+        out = None
+        print("Invoking inference...")
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("failed to fetch next frame")
+                break
+
+            if counter == 0 and FLAGS.out:
+                print("Opening output video stream...")
+                fourcc = cv2.VideoWriter_fourcc('M', 'P', '4', 'V')
+                out = cv2.VideoWriter(FLAGS.out, fourcc, FLAGS.fps, (frame.shape[1], frame.shape[0]))
+
+            input_image_buffer = preprocess(frame)
+            input_image_buffer = np.expand_dims(input_image_buffer, axis=0)
+            inputs[0].set_data_from_numpy(input_image_buffer)
+
+            results = triton_client.infer(model_name=FLAGS.model,
+                                    inputs=inputs,
+                                    outputs=outputs,
+                                    client_timeout=FLAGS.client_timeout)
+
+            result = results.as_numpy('prob')
+            detected_objects = postprocess(result, frame.shape[1], frame.shape[0])
+            print(f"Frame {counter}: {len(detected_objects)} objects")
+            counter += 1
+
+            for box in detected_objects:
+                frame = render_box(frame, box.box(), color=tuple(RAND_COLORS[box.classID % 64].tolist()))
+                size = get_text_size(frame, COCOLabels(box.classID).name, normalised_scaling=0.6)
+                frame = render_filled_box(frame, (box.x1 - 3, box.y1 - 3, box.x1 + size[0], box.y1 + size[1]), color=(220, 220, 220))
+                frame = render_text(frame, COCOLabels(box.classID).name, (box.x1, box.y1), color=(30, 30, 30), normalised_scaling=0.5)
+
+            if FLAGS.out:
+                out.write(frame)
+            else:
+                cv2.imshow('image', frame)
+                if cv2.waitKey(1) == ord('q'):
+                    break
+
+        cap.release()
+        if FLAGS.out:
+            out.release()
+        else:
+            cv2.destroyAllWindows()
+        print("Done")

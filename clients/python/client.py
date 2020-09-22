@@ -3,10 +3,14 @@
 import argparse
 import numpy as np
 import sys
-import hashlib
+import cv2
 
 import tritonclient.grpc as grpcclient
 from tritonclient.utils import InferenceServerException
+
+from processing import preprocess, postprocess
+from render import render_box, render_filled_box, get_text_size, render_text, RAND_COLORS
+from labels import COCOLabels
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -142,17 +146,65 @@ if __name__ == '__main__':
                                     inputs=inputs,
                                     outputs=outputs,
                                     client_timeout=FLAGS.client_timeout)
-        print("Done")
-        result = results.as_numpy('prob')
-        print(f"Received result buffer of size {result.shape}")
-        if not result.flags['C_CONTIGUOUS']:
-            result = np.ascontiguousarray(result)
-        print(f"MD5 buffer checksum: {hashlib.md5(result).hexdigest()}")
-        print(f"Naive buffer sum: {np.sum(result)}")
-
         if FLAGS.model_info:
             statistics = triton_client.get_inference_statistics(model_name=FLAGS.model)
             if len(statistics.model_stats) != 1:
-                print("FAILED: Inference Statistics")
+                print("FAILED: get_inference_statistics")
                 sys.exit(1)
             print(statistics)
+        print("Done")
+
+        result = results.as_numpy('prob')
+        print(f"Received result buffer of size {result.shape}")
+        print(f"Naive buffer sum: {np.sum(result)}")
+
+    # IMAGE MODE
+    if FLAGS.mode == 'image':
+        print("Running in 'image' mode")
+        if not FLAGS.input:
+            print("FAILED: no input image")
+            sys.exit(1)
+        
+        inputs = []
+        outputs = []
+        inputs.append(grpcclient.InferInput('data', [1, 3, 608, 608], "FP32"))
+        outputs.append(grpcclient.InferRequestedOutput('prob'))
+
+        print("Creating buffer from image file...")
+        input_image = cv2.imread(str(FLAGS.input))
+        if input_image is None:
+            print(f"FAILED: could not load input image {str(FLAGS.input)}")
+            sys.exit(1)
+        input_image_buffer = preprocess(input_image)
+        input_image_buffer = np.expand_dims(input_image_buffer, axis=0)
+        inputs[0].set_data_from_numpy(input_image_buffer)
+
+        print("Invoking inference...")
+        results = triton_client.infer(model_name=FLAGS.model,
+                                    inputs=inputs,
+                                    outputs=outputs,
+                                    client_timeout=FLAGS.client_timeout)
+        if FLAGS.model_info:
+            statistics = triton_client.get_inference_statistics(model_name=FLAGS.model)
+            if len(statistics.model_stats) != 1:
+                print("FAILED: get_inference_statistics")
+                sys.exit(1)
+            print(statistics)
+        print("Done")
+
+        result = results.as_numpy('prob')
+        print(f"Received result buffer of size {result.shape}")
+        print(f"Naive buffer sum: {np.sum(result)}")
+
+        detected_objects = postprocess(result, input_image.shape[1], input_image.shape[0])
+        print(f"Detected objects: {len(detected_objects)}")
+
+        for box in detected_objects:
+            input_image = render_box(input_image, box.box(), color=tuple(RAND_COLORS[box.classID % 64].tolist()))
+            size = get_text_size(input_image, COCOLabels(box.classID).name, normalised_scaling=0.6)
+            input_image = render_filled_box(input_image, (box.x1 - 3, box.y1 - 3, box.x1 + size[0], box.y1 + size[1]), color=(220, 220, 220))
+            input_image = render_text(input_image, COCOLabels(box.classID).name, (box.x1, box.y1), color=(30, 30, 30), normalised_scaling=0.5)
+
+        cv2.imshow('image', input_image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()

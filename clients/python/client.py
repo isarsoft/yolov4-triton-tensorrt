@@ -14,6 +14,10 @@ if __name__ == '__main__':
                         choices=['dummy', 'image', 'video'],
                         default='dummy',
                         help='Run mode. \'dummy\' will send an emtpy buffer to the server to test if inference works. \'image\' will process an image. \'video\' will process a video.')
+    parser.add_argument('input',
+                        type=str,
+                        nargs='?',
+                        help='Input file to load from in image or video mode')
     parser.add_argument('-m',
                         '--model',
                         type=str,
@@ -122,7 +126,8 @@ if __name__ == '__main__':
             print("FAILED : get_model_config")
             print("Got: {}".format(ex.message()))
             sys.exit(1)
-    
+
+    # DUMMY MODE
     if FLAGS.mode == 'dummy':
         print("Running in 'dummy' mode")
         print("Creating emtpy buffer filled with zeros...")
@@ -140,7 +145,10 @@ if __name__ == '__main__':
         print("Done")
         result = results.as_numpy('prob')
         print(f"Received result buffer of size {result.shape}")
+        if not result.flags['C_CONTIGUOUS']:
+            result = np.ascontiguousarray(result)
         print(f"MD5 buffer checksum: {hashlib.md5(result).hexdigest()}")
+        print(f"Naive buffer sum: {np.sum(result)}")
 
         if FLAGS.model_info:
             statistics = triton_client.get_inference_statistics(model_name=FLAGS.model)

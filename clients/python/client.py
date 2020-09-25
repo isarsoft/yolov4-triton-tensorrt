@@ -209,6 +209,7 @@ if __name__ == '__main__':
         print(f"Naive buffer sum: {np.sum(result)}")
 
         detected_objects = postprocess(result, input_image.shape[1], input_image.shape[0])
+        print(f"Raw boxes: {int(result[0, 0, 0, 0])}")
         print(f"Detected objects: {len(detected_objects)}")
 
         for box in detected_objects:
@@ -269,7 +270,7 @@ if __name__ == '__main__':
 
             result = results.as_numpy('prob')
             detected_objects = postprocess(result, frame.shape[1], frame.shape[0])
-            print(f"Frame {counter}: {len(detected_objects)} objects")
+            print(f"Frame {counter}: {int(result[0, 0, 0, 0])} raw boxes, {len(detected_objects)} objects")
             counter += 1
 
             for box in detected_objects:

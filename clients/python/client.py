@@ -212,10 +212,11 @@ if __name__ == '__main__':
         print(f"Detected objects: {len(detected_objects)}")
 
         for box in detected_objects:
+            print(f"{COCOLabels(box.classID).name}: {box.confidence}")
             input_image = render_box(input_image, box.box(), color=tuple(RAND_COLORS[box.classID % 64].tolist()))
-            size = get_text_size(input_image, COCOLabels(box.classID).name, normalised_scaling=0.6)
+            size = get_text_size(input_image, f"{COCOLabels(box.classID).name}: {box.confidence:.2f}", normalised_scaling=0.6)
             input_image = render_filled_box(input_image, (box.x1 - 3, box.y1 - 3, box.x1 + size[0], box.y1 + size[1]), color=(220, 220, 220))
-            input_image = render_text(input_image, COCOLabels(box.classID).name, (box.x1, box.y1), color=(30, 30, 30), normalised_scaling=0.5)
+            input_image = render_text(input_image, f"{COCOLabels(box.classID).name}: {box.confidence:.2f}", (box.x1, box.y1), color=(30, 30, 30), normalised_scaling=0.5)
 
         if FLAGS.out:
             cv2.imwrite(FLAGS.out, input_image)
@@ -272,10 +273,11 @@ if __name__ == '__main__':
             counter += 1
 
             for box in detected_objects:
+                print(f"{COCOLabels(box.classID).name}: {box.confidence}")
                 frame = render_box(frame, box.box(), color=tuple(RAND_COLORS[box.classID % 64].tolist()))
-                size = get_text_size(frame, COCOLabels(box.classID).name, normalised_scaling=0.6)
+                size = get_text_size(frame, f"{COCOLabels(box.classID).name}: {box.confidence:.2f}", normalised_scaling=0.6)
                 frame = render_filled_box(frame, (box.x1 - 3, box.y1 - 3, box.x1 + size[0], box.y1 + size[1]), color=(220, 220, 220))
-                frame = render_text(frame, COCOLabels(box.classID).name, (box.x1, box.y1), color=(30, 30, 30), normalised_scaling=0.5)
+                frame = render_text(frame, f"{COCOLabels(box.classID).name}: {box.confidence:.2f}", (box.x1, box.y1), color=(30, 30, 30), normalised_scaling=0.5)
 
             if FLAGS.out:
                 out.write(frame)

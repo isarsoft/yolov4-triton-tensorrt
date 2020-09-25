@@ -299,6 +299,14 @@ if __name__ == '__main__':
                 if cv2.waitKey(1) == ord('q'):
                     break
 
+        if FLAGS.model_info:
+            statistics = triton_client.get_inference_statistics(model_name=FLAGS.model)
+            if len(statistics.model_stats) != 1:
+                print("FAILED: get_inference_statistics")
+                sys.exit(1)
+            print(statistics)
+        print("Done")
+
         cap.release()
         if FLAGS.out:
             out.release()

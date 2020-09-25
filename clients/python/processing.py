@@ -52,12 +52,12 @@ def postprocess(buffer, image_width, image_height, conf_threshold=0.9):
         bboxes = buffer[0, 1 : (num_bboxes * 7 + 1), 0, 0].reshape(-1, 7)
         labels = set(bboxes[:, 5].astype(int))
         for label in labels:
-            selected_bboxes = bboxes[np.where((bboxes[:, 5] == label) & (bboxes[:, 4] >= conf_threshold))]
-            selected_bboxes_keep = selected_bboxes[nms(selected_bboxes[:, :4], selected_bboxes[:, 4])]
+            selected_bboxes = bboxes[np.where((bboxes[:, 5] == label) & ((bboxes[:, 4] * bboxes[:, 6]) >= conf_threshold))]
+            selected_bboxes_keep = selected_bboxes[nms(selected_bboxes[:, :4], selected_bboxes[:, 4] * selected_bboxes[:, 6])]
             for idx in range(selected_bboxes_keep.shape[0]):
                 box_xy = selected_bboxes_keep[idx, :2]
                 box_wh = selected_bboxes_keep[idx, 2:4]
-                score = selected_bboxes_keep[idx, 4]
+                score = selected_bboxes[idx, 4] * selected_bboxes[idx, 6]
 
                 box_x1y1 = box_xy - (box_wh / 2)
                 box_x2y2 = np.minimum(box_xy + (box_wh / 2), [INPUT_WIDTH, INPUT_HEIGHT])

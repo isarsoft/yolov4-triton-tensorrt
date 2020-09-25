@@ -158,11 +158,11 @@ if __name__ == '__main__':
     # DUMMY MODE
     if FLAGS.mode == 'dummy':
         print("Running in 'dummy' mode")
-        print("Creating emtpy buffer filled with zeros...")
+        print("Creating emtpy buffer filled with ones...")
         inputs = []
         outputs = []
         inputs.append(grpcclient.InferInput('data', [1, 3, 608, 608], "FP32"))
-        inputs[0].set_data_from_numpy(np.zeros(shape=(1, 3, 608, 608), dtype=np.float32))
+        inputs[0].set_data_from_numpy(np.ones(shape=(1, 3, 608, 608), dtype=np.float32))
         outputs.append(grpcclient.InferRequestedOutput('prob'))
 
         print("Invoking inference...")

@@ -57,7 +57,7 @@ def postprocess(buffer, image_width, image_height, conf_threshold=0.8, nms_thres
             for idx in range(selected_bboxes_keep.shape[0]):
                 box_xy = selected_bboxes_keep[idx, :2]
                 box_wh = selected_bboxes_keep[idx, 2:4]
-                score = selected_bboxes[idx, 4] * selected_bboxes[idx, 6]
+                score = selected_bboxes_keep[idx, 4] * selected_bboxes_keep[idx, 6]
 
                 box_x1y1 = box_xy - (box_wh / 2)
                 box_x2y2 = np.minimum(box_xy + (box_wh / 2), [INPUT_WIDTH, INPUT_HEIGHT])

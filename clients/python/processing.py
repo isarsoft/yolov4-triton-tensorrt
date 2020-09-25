@@ -43,7 +43,7 @@ def nms(boxes, box_confidences, nms_threshold=0.5):
         keep = np.array(keep).astype(int)
         return keep
 
-def postprocess(buffer, image_width, image_height, conf_threshold=0.9):
+def postprocess(buffer, image_width, image_height, conf_threshold=0.8, nms_threshold=0.5):
     detected_objects = []
     img_scale = [image_width / INPUT_WIDTH, image_height / INPUT_HEIGHT, image_width / INPUT_WIDTH, image_height / INPUT_HEIGHT]
     num_bboxes = int(buffer[0, 0, 0, 0])
@@ -53,7 +53,7 @@ def postprocess(buffer, image_width, image_height, conf_threshold=0.9):
         labels = set(bboxes[:, 5].astype(int))
         for label in labels:
             selected_bboxes = bboxes[np.where((bboxes[:, 5] == label) & ((bboxes[:, 4] * bboxes[:, 6]) >= conf_threshold))]
-            selected_bboxes_keep = selected_bboxes[nms(selected_bboxes[:, :4], selected_bboxes[:, 4] * selected_bboxes[:, 6])]
+            selected_bboxes_keep = selected_bboxes[nms(selected_bboxes[:, :4], selected_bboxes[:, 4] * selected_bboxes[:, 6], nms_threshold)]
             for idx in range(selected_bboxes_keep.shape[0]):
                 box_xy = selected_bboxes_keep[idx, :2]
                 box_wh = selected_bboxes_keep[idx, 2:4]

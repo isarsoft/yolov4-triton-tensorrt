@@ -27,25 +27,37 @@ if __name__ == '__main__':
                         type=str,
                         required=False,
                         default='yolov4',
-                        help='Inference model name. Default is yolov4.')
+                        help='Inference model name, default yolov4')
     parser.add_argument('-u',
                         '--url',
                         type=str,
                         required=False,
                         default='localhost:8001',
-                        help='Inference server URL. Default is localhost:8001.')
+                        help='Inference server URL, default localhost:8001')
     parser.add_argument('-o',
                         '--out',
                         type=str,
                         required=False,
                         default='',
-                        help='Write output into file instead of displaying it.')
+                        help='Write output into file instead of displaying it')
+    parser.add_argument('-c',
+                        '--confidence',
+                        type=float,
+                        required=False,
+                        default=0.8,
+                        help='Confidence threshold for detected objects, default 0.8')
+    parser.add_argument('-n',
+                        '--nms',
+                        type=float,
+                        required=False,
+                        default=0.5,
+                        help='Non-maximum suppression threshold for filtering raw boxes, default 0.5')
     parser.add_argument('-f',
                         '--fps',
                         type=float,
                         required=False,
                         default=24.0,
-                        help='Video output fps. Default 24.0 FPS.')
+                        help='Video output fps, default 24.0 FPS')
     parser.add_argument('-i',
                         '--model-info',
                         action="store_true",
@@ -63,7 +75,7 @@ if __name__ == '__main__':
                         type=float,
                         required=False,
                         default=None,
-                        help='Client timeout in seconds. Default is None.')
+                        help='Client timeout in seconds, default no timeout')
     parser.add_argument('-s',
                         '--ssl',
                         action="store_true",
@@ -75,19 +87,19 @@ if __name__ == '__main__':
                         type=str,
                         required=False,
                         default=None,
-                        help='File holding PEM-encoded root certificates. Default is None.')
+                        help='File holding PEM-encoded root certificates, default none')
     parser.add_argument('-p',
                         '--private-key',
                         type=str,
                         required=False,
                         default=None,
-                        help='File holding PEM-encoded private key. Default is None.')
+                        help='File holding PEM-encoded private key, default is none')
     parser.add_argument('-x',
                         '--certificate-chain',
                         type=str,
                         required=False,
                         default=None,
-                        help='File holding PEM-encoded certicate chain. Default is None.')
+                        help='File holding PEM-encoded certicate chain default is none')
 
     FLAGS = parser.parse_args()
 
@@ -208,7 +220,7 @@ if __name__ == '__main__':
         print(f"Received result buffer of size {result.shape}")
         print(f"Naive buffer sum: {np.sum(result)}")
 
-        detected_objects = postprocess(result, input_image.shape[1], input_image.shape[0])
+        detected_objects = postprocess(result, input_image.shape[1], input_image.shape[0], FLAGS.confidence, FLAGS.nms)
         print(f"Raw boxes: {int(result[0, 0, 0, 0])}")
         print(f"Detected objects: {len(detected_objects)}")
 
@@ -269,7 +281,7 @@ if __name__ == '__main__':
                                     client_timeout=FLAGS.client_timeout)
 
             result = results.as_numpy('prob')
-            detected_objects = postprocess(result, frame.shape[1], frame.shape[0])
+            detected_objects = postprocess(result, frame.shape[1], frame.shape[0], FLAGS.confidence, FLAGS.nms)
             print(f"Frame {counter}: {int(result[0, 0, 0, 0])} raw boxes, {len(detected_objects)} objects")
             counter += 1
 

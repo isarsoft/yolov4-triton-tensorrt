@@ -1,3 +1,6 @@
+#ifndef __TRT_WEIGHTS_H_
+#define __TRT_WEIGHTS_H_
+
 #include <map>
 
 using namespace nvinfer1;
@@ -40,3 +43,5 @@ static std::map<std::string, Weights> loadWeights(const std::string file) {
 
     return weightMap;
 }
+
+#endif

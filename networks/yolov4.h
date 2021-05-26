@@ -1,5 +1,6 @@
 #include "NvInfer.h"
 #include "NvInferPlugin.h"
+#include <cmath>
 
 #include "../layers/yololayer.h"
 

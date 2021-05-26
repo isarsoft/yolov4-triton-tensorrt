@@ -1,3 +1,6 @@
 /build
 .vscode
 __pycache__
+*.mp4
+*.avi
+*.mpg

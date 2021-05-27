@@ -41,7 +41,7 @@ namespace nvinfer1
 
     YoloLayerPlugin::YoloLayerPlugin(const void* data, size_t length)
     {
-        const char *d = reinterpret_cast<const char *>(data), *a = d;
+        const char *d = reinterpret_cast<const char *>(data);
         read(d, mThreadCount);
         read(d, mYoloWidth);
         read(d, mYoloHeight);
@@ -57,12 +57,12 @@ namespace nvinfer1
         CHECK(cudaMalloc(&mAnchors, MAX_ANCHORS * 2 * sizeof(float)));
         CHECK(cudaMemcpy(mAnchors, mAnchorsHost, mNumAnchors * 2 * sizeof(float), cudaMemcpyHostToDevice));
 
-        assert(d == a + length);
+        assert(d == reinterpret_cast<const char *>(data) + length);
     }
 
     void YoloLayerPlugin::serialize(void* buffer) const
     {
-        char* d = static_cast<char*>(buffer), *a = d;
+        char* d = static_cast<char*>(buffer);
         write(d, mThreadCount);
         write(d, mYoloWidth);
         write(d, mYoloHeight);
@@ -75,7 +75,7 @@ namespace nvinfer1
         write(d, mScaleXY);
         write(d, mNewCoords);
 
-        assert(d == a + getSerializationSize());
+        assert(d == static_cast<char*>(buffer) + getSerializationSize());
     }
 
     size_t YoloLayerPlugin::getSerializationSize() const

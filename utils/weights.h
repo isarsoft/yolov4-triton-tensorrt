@@ -3,6 +3,7 @@
 
 #include <map>
 #include <fstream>
+#include <cassert>
 
 using namespace nvinfer1;
 

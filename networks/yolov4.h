@@ -2,8 +2,6 @@
 #include "NvInferPlugin.h"
 #include <cmath>
 
-#include "../layers/yololayer.h"
-
 #include "../utils/weights.h"
 
 using namespace nvinfer1;
@@ -13,12 +11,15 @@ using namespace nvinfer1;
 namespace yolov4 {
 
     // stuff we know about the network and the input/output blobs
-    static const int INPUT_H = Yolo::INPUT_H;
-    static const int INPUT_W = Yolo::INPUT_W;
-    static const int DETECTION_SIZE = sizeof(Yolo::Detection) / sizeof(float);
-    static const int OUTPUT_SIZE = Yolo::MAX_OUTPUT_BBOX_COUNT * DETECTION_SIZE + 1;  // we assume the yololayer outputs no more than MAX_OUTPUT_BBOX_COUNT boxes that conf >= 0.1
-    const char* INPUT_BLOB_NAME = "data";
-    const char* OUTPUT_BLOB_NAME = "prob";
+    static const int INPUT_H = 608;
+    static const int INPUT_W = 608;
+    static const int CLASS_NUM = 80;
+    static const std::vector<float> anchors1 = { 12,16, 19,36, 40,28 };
+    static const std::vector<float> anchors2 = { 36,75, 76,55, 72,146 };
+    static const std::vector<float> anchors3 = { 142,110, 192,243, 459,401 };
+
+    const char* INPUT_BLOB_NAME = "input";
+    const char* OUTPUT_BLOB_NAME = "detections";
 
     IScaleLayer* addBatchNorm2d(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, ITensor& input, std::string lname, float eps) {
         float *gamma = (float*)weightMap[lname + ".weight"].values;
@@ -82,6 +83,31 @@ namespace yolov4 {
         lr->setAlpha(0.1);
 
         return lr;
+    }
+
+    IPluginV2Layer * yoloLayer(INetworkDefinition *network, ITensor& input, int inputWidth, int inputHeight, int widthFactor, int heightFactor, int numClasses, const std::vector<float>& anchors, float scaleXY, int newCoords) {
+        auto creator = getPluginRegistry()->getPluginCreator("YoloLayer_TRT", "1");
+        
+        int yoloWidth = inputWidth / widthFactor;
+        int yoloHeight = inputHeight / heightFactor;
+        int numAnchors = anchors.size() / 2;
+
+        PluginFieldCollection pluginData;
+        std::vector<PluginField> pluginFields;
+        pluginFields.emplace_back(PluginField("yoloWidth", &yoloWidth, PluginFieldType::kINT32, 1));
+        pluginFields.emplace_back(PluginField("yoloHeight", &yoloHeight, PluginFieldType::kINT32, 1));
+        pluginFields.emplace_back(PluginField("numAnchors", &numAnchors, PluginFieldType::kINT32, 1));
+        pluginFields.emplace_back(PluginField("numClasses", &numClasses, PluginFieldType::kINT32, 1));
+        pluginFields.emplace_back(PluginField("inputMultiplier", &widthFactor, PluginFieldType::kINT32, 1));
+        pluginFields.emplace_back(PluginField("anchors", anchors.data(), PluginFieldType::kFLOAT32, anchors.size()));
+        pluginFields.emplace_back(PluginField("scaleXY", &scaleXY, PluginFieldType::kFLOAT32, 1));
+        pluginFields.emplace_back(PluginField("newCoords", &newCoords, PluginFieldType::kINT32, 1));
+        pluginData.nbFields = pluginFields.size();
+        pluginData.fields = pluginFields.data();
+
+        IPluginV2 *plugin = creator->createPlugin("YoloLayer_TRT", &pluginData);
+        ITensor* inputTensors[] = { &input };
+        return network->addPluginV2(inputTensors, 1, *plugin);
     }
 
     ICudaEngine* createEngine(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt, const std::string &weightsPath) {
@@ -287,9 +313,11 @@ namespace yolov4 {
         auto l135 = convBnLeaky(network, weightMap, *l134->getOutput(0), 256, 3, 1, 1, 135);
         auto l136 = convBnLeaky(network, weightMap, *l135->getOutput(0), 128, 1, 1, 0, 136);
         auto l137 = convBnLeaky(network, weightMap, *l136->getOutput(0), 256, 3, 1, 1, 137);
-        IConvolutionLayer* conv138 = network->addConvolutionNd(*l137->getOutput(0), 3 * (Yolo::CLASS_NUM + 5), DimsHW{1, 1}, weightMap["module_list.138.Conv2d.weight"], weightMap["module_list.138.Conv2d.bias"]);
+        IConvolutionLayer* conv138 = network->addConvolutionNd(*l137->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["module_list.138.Conv2d.weight"], weightMap["module_list.138.Conv2d.bias"]);
         assert(conv138);
+
         // 139 is yolo layer
+        auto yolo139 = yoloLayer(network, *conv138->getOutput(0), INPUT_W, INPUT_H, 8, 8, CLASS_NUM, anchors1, 1.2f, 0);
 
         auto l140 = l136;
         auto l141 = convBnLeaky(network, weightMap, *l140->getOutput(0), 256, 3, 2, 1, 141);
@@ -303,9 +331,11 @@ namespace yolov4 {
         auto l146 = convBnLeaky(network, weightMap, *l145->getOutput(0), 512, 3, 1, 1, 146);
         auto l147 = convBnLeaky(network, weightMap, *l146->getOutput(0), 256, 1, 1, 0, 147);
         auto l148 = convBnLeaky(network, weightMap, *l147->getOutput(0), 512, 3, 1, 1, 148);
-        IConvolutionLayer* conv149 = network->addConvolutionNd(*l148->getOutput(0), 3 * (Yolo::CLASS_NUM + 5), DimsHW{1, 1}, weightMap["module_list.149.Conv2d.weight"], weightMap["module_list.149.Conv2d.bias"]);
+        IConvolutionLayer* conv149 = network->addConvolutionNd(*l148->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["module_list.149.Conv2d.weight"], weightMap["module_list.149.Conv2d.bias"]);
         assert(conv149);
+
         // 150 is yolo layer
+        auto yolo150 = yoloLayer(network, *conv149->getOutput(0), INPUT_W, INPUT_H, 16, 16, CLASS_NUM, anchors2, 1.1f, 0);
 
         auto l151 = l147;
         auto l152 = convBnLeaky(network, weightMap, *l151->getOutput(0), 512, 3, 2, 1, 152);
@@ -319,18 +349,16 @@ namespace yolov4 {
         auto l157 = convBnLeaky(network, weightMap, *l156->getOutput(0), 1024, 3, 1, 1, 157);
         auto l158 = convBnLeaky(network, weightMap, *l157->getOutput(0), 512, 1, 1, 0, 158);
         auto l159 = convBnLeaky(network, weightMap, *l158->getOutput(0), 1024, 3, 1, 1, 159);
-        IConvolutionLayer* conv160 = network->addConvolutionNd(*l159->getOutput(0), 3 * (Yolo::CLASS_NUM + 5), DimsHW{1, 1}, weightMap["module_list.160.Conv2d.weight"], weightMap["module_list.160.Conv2d.bias"]);
+        IConvolutionLayer* conv160 = network->addConvolutionNd(*l159->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["module_list.160.Conv2d.weight"], weightMap["module_list.160.Conv2d.bias"]);
         assert(conv160);
+
         // 161 is yolo layer
-
-        auto creator = getPluginRegistry()->getPluginCreator("YoloLayer_TRT", "1");
-        const PluginFieldCollection* pluginData = creator->getFieldNames();
-        IPluginV2 *pluginObj = creator->createPlugin("yololayer", pluginData);
-        ITensor* inputTensors_yolo[] = {conv138->getOutput(0), conv149->getOutput(0), conv160->getOutput(0)};
-        auto yolo = network->addPluginV2(inputTensors_yolo, 3, *pluginObj);
-
-        yolo->getOutput(0)->setName(OUTPUT_BLOB_NAME);
-        network->markOutput(*yolo->getOutput(0));
+        auto yolo161 = yoloLayer(network, *conv160->getOutput(0), INPUT_W, INPUT_H, 32, 32, CLASS_NUM, anchors3, 1.05f, 0);
+        
+        ITensor* inputTensors162[] = {yolo139->getOutput(0), yolo150->getOutput(0), yolo161->getOutput(0)};
+        auto cat162 = network->addConcatenation(inputTensors162, 3);
+        cat162->getOutput(0)->setName(OUTPUT_BLOB_NAME);
+        network->markOutput(*cat162->getOutput(0));
 
         // Build engine
         builder->setMaxBatchSize(maxBatchSize);

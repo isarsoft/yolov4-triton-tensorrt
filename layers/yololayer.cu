@@ -317,6 +317,15 @@ namespace nvinfer1
     {
         mPluginAttributes.clear();
 
+        mPluginAttributes.emplace_back(PluginField("yoloWidth", nullptr, PluginFieldType::kINT32, 1));
+        mPluginAttributes.emplace_back(PluginField("yoloHeight", nullptr, PluginFieldType::kINT32, 1));
+        mPluginAttributes.emplace_back(PluginField("numClasses", nullptr, PluginFieldType::kINT32, 1));
+        mPluginAttributes.emplace_back(PluginField("inputMultiplier", nullptr, PluginFieldType::kINT32, 1));
+        mPluginAttributes.emplace_back(PluginField("numAnchors", nullptr, PluginFieldType::kINT32, 1));
+        mPluginAttributes.emplace_back(PluginField("anchors", nullptr, PluginFieldType::kFLOAT32, 1));
+        mPluginAttributes.emplace_back(PluginField("scaleXY", nullptr, PluginFieldType::kFLOAT32, 1));
+        mPluginAttributes.emplace_back(PluginField("newCoords", nullptr, PluginFieldType::kINT32, 1));
+
         mFC.nbFields = mPluginAttributes.size();
         mFC.fields = mPluginAttributes.data();
     }

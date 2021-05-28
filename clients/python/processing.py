@@ -3,70 +3,130 @@ from boundingbox import BoundingBox
 import cv2
 import numpy as np
 
-INPUT_HEIGHT = 608
-INPUT_WIDTH = 608
+def preprocess(img, input_shape, letter_box=False):
+    """Preprocess an image before TRT YOLO inferencing.
+    # Args
+        img: int8 numpy array of shape (img_h, img_w, 3)
+        input_shape: a tuple of (H, W)
+        letter_box: boolean, specifies whether to keep aspect ratio and
+                    create a "letterboxed" image for inference
+    # Returns
+        preprocessed img: float32 numpy array of shape (3, H, W)
+    """
+    if letter_box:
+        img_h, img_w, _ = img.shape
+        new_h, new_w = input_shape[0], input_shape[1]
+        offset_h, offset_w = 0, 0
+        if (new_w / img_w) <= (new_h / img_h):
+            new_h = int(img_h * new_w / img_w)
+            offset_h = (input_shape[0] - new_h) // 2
+        else:
+            new_w = int(img_w * new_h / img_h)
+            offset_w = (input_shape[1] - new_w) // 2
+        resized = cv2.resize(img, (new_w, new_h))
+        img = np.full((input_shape[0], input_shape[1], 3), 127, dtype=np.uint8)
+        img[offset_h:(offset_h + new_h), offset_w:(offset_w + new_w), :] = resized
+    else:
+        img = cv2.resize(img, (input_shape[1], input_shape[0]))
 
-def preprocess(image):
-    image = cv2.resize(image, (INPUT_WIDTH, INPUT_HEIGHT))
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image = np.transpose(np.array(image, dtype=np.float32, order='C'), (2, 0, 1))
-    image /= 255.0
-    return image
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.transpose((2, 0, 1)).astype(np.float32)
+    img /= 255.0
+    return img
 
-def nms(boxes, box_confidences, nms_threshold=0.5):
-        x_coord = boxes[:, 0]
-        y_coord = boxes[:, 1]
-        width = boxes[:, 2]
-        height = boxes[:, 3]
+def _nms_boxes(detections, nms_threshold):
+    """Apply the Non-Maximum Suppression (NMS) algorithm on the bounding
+    boxes with their confidence scores and return an array with the
+    indexes of the bounding boxes we want to keep.
+    # Args
+        detections: Nx7 numpy arrays of
+                    [[x, y, w, h, box_confidence, class_id, class_prob],
+                     ......]
+    """
+    x_coord = detections[:, 0]
+    y_coord = detections[:, 1]
+    width = detections[:, 2]
+    height = detections[:, 3]
+    box_confidences = detections[:, 4] * detections[:, 6]
 
-        areas = width * height
-        ordered = box_confidences.argsort()[::-1]
+    areas = width * height
+    ordered = box_confidences.argsort()[::-1]
 
-        keep = list()
-        while ordered.size > 0:
-            i = ordered[0]
-            keep.append(i)
-            xx1 = np.maximum(x_coord[i], x_coord[ordered[1:]])
-            yy1 = np.maximum(y_coord[i], y_coord[ordered[1:]])
-            xx2 = np.minimum(x_coord[i] + width[i], x_coord[ordered[1:]] + width[ordered[1:]])
-            yy2 = np.minimum(y_coord[i] + height[i], y_coord[ordered[1:]] + height[ordered[1:]])
+    keep = list()
+    while ordered.size > 0:
+        # Index of the current element:
+        i = ordered[0]
+        keep.append(i)
+        xx1 = np.maximum(x_coord[i], x_coord[ordered[1:]])
+        yy1 = np.maximum(y_coord[i], y_coord[ordered[1:]])
+        xx2 = np.minimum(x_coord[i] + width[i], x_coord[ordered[1:]] + width[ordered[1:]])
+        yy2 = np.minimum(y_coord[i] + height[i], y_coord[ordered[1:]] + height[ordered[1:]])
 
-            width1 = np.maximum(0.0, xx2 - xx1 + 1)
-            height1 = np.maximum(0.0, yy2 - yy1 + 1)
-            intersection = width1 * height1
-            union = (areas[i] + areas[ordered[1:]] - intersection)
+        width1 = np.maximum(0.0, xx2 - xx1 + 1)
+        height1 = np.maximum(0.0, yy2 - yy1 + 1)
+        intersection = width1 * height1
+        union = (areas[i] + areas[ordered[1:]] - intersection)
+        iou = intersection / union
+        indexes = np.where(iou <= nms_threshold)[0]
+        ordered = ordered[indexes + 1]
 
-            iou = intersection / union
+    keep = np.array(keep)
+    return keep
 
-            indexes = np.where(iou <= nms_threshold)[0]
-            ordered = ordered[indexes + 1]
-        keep = np.array(keep).astype(int)
-        return keep
+def postprocess(output, img_w, img_h, input_shape, conf_th=0.8, nms_threshold=0.5, letter_box=False):
+    """Postprocess TensorRT outputs.
+    # Args
+        output: list of detections with schema [x, y, w, h, box_confidence, class_id, class_prob]
+        conf_th: confidence threshold
+        letter_box: boolean, referring to _preprocess_yolo()
+    # Returns
+        list of bounding boxes with all detections above threshold and after nms, see class BoundingBox
+    """
+    # filter low-conf detections
+    detections = output.reshape((-1, 7))
+    detections = detections[detections[:, 4] * detections[:, 6] >= conf_th]
 
-def postprocess(buffer, image_width, image_height, conf_threshold=0.8, nms_threshold=0.5):
+    if len(detections) == 0:
+        boxes = np.zeros((0, 4), dtype=np.int)
+        scores = np.zeros((0,), dtype=np.float32)
+        classes = np.zeros((0,), dtype=np.float32)
+    else:
+        box_scores = detections[:, 4] * detections[:, 6]
+
+        # scale x, y, w, h from [0, 1] to pixel values
+        old_h, old_w = img_h, img_w
+        offset_h, offset_w = 0, 0
+        if letter_box:
+            if (img_w / input_shape[1]) >= (img_h / input_shape[0]):
+                old_h = int(input_shape[0] * img_w / input_shape[1])
+                offset_h = (old_h - img_h) // 2
+            else:
+                old_w = int(input_shape[1] * img_h / input_shape[0])
+                offset_w = (old_w - img_w) // 2
+        detections[:, 0:4] *= np.array(
+            [old_w, old_h, old_w, old_h], dtype=np.float32)
+
+        # NMS
+        nms_detections = np.zeros((0, 7), dtype=detections.dtype)
+        for class_id in set(detections[:, 5]):
+            idxs = np.where(detections[:, 5] == class_id)
+            cls_detections = detections[idxs]
+            keep = _nms_boxes(cls_detections, nms_threshold)
+            nms_detections = np.concatenate(
+                [nms_detections, cls_detections[keep]], axis=0)
+
+        xx = nms_detections[:, 0].reshape(-1, 1)
+        yy = nms_detections[:, 1].reshape(-1, 1)
+        if letter_box:
+            xx = xx - offset_w
+            yy = yy - offset_h
+        ww = nms_detections[:, 2].reshape(-1, 1)
+        hh = nms_detections[:, 3].reshape(-1, 1)
+        boxes = np.concatenate([xx, yy, xx+ww, yy+hh], axis=1) + 0.5
+        boxes = boxes.astype(np.int)
+        scores = nms_detections[:, 4] * nms_detections[:, 6]
+        classes = nms_detections[:, 5].astype(np.int)
     detected_objects = []
-    img_scale = [image_width / INPUT_WIDTH, image_height / INPUT_HEIGHT, image_width / INPUT_WIDTH, image_height / INPUT_HEIGHT]
-    num_bboxes = int(buffer[0, 0, 0, 0])
-
-    if num_bboxes:
-        bboxes = buffer[0, 1 : (num_bboxes * 7 + 1), 0, 0].reshape(-1, 7)
-        labels = set(bboxes[:, 5].astype(int))
-        for label in labels:
-            selected_bboxes = bboxes[np.where((bboxes[:, 5] == label) & ((bboxes[:, 4] * bboxes[:, 6]) >= conf_threshold))]
-            selected_bboxes_keep = selected_bboxes[nms(selected_bboxes[:, :4], selected_bboxes[:, 4] * selected_bboxes[:, 6], nms_threshold)]
-            for idx in range(selected_bboxes_keep.shape[0]):
-                box_xy = selected_bboxes_keep[idx, :2]
-                box_wh = selected_bboxes_keep[idx, 2:4]
-                score = selected_bboxes_keep[idx, 4] * selected_bboxes_keep[idx, 6]
-
-                box_x1y1 = box_xy - (box_wh / 2)
-                box_x2y2 = np.minimum(box_xy + (box_wh / 2), [INPUT_WIDTH, INPUT_HEIGHT])
-                box = np.concatenate([box_x1y1, box_x2y2])
-                box *= img_scale
-
-                if box[0] == box[2]:
-                    continue
-                if box[1] == box[3]:
-                    continue
-                detected_objects.append(BoundingBox(label, score, box[0], box[2], box[1], box[3], image_height, image_width))
+    for box, score, label in zip(boxes, scores, classes):
+        detected_objects.append(BoundingBox(label, score, box[0], box[2], box[1], box[3], img_h, img_w))
     return detected_objects

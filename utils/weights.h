@@ -2,6 +2,8 @@
 #define __TRT_WEIGHTS_H_
 
 #include <map>
+#include <fstream>
+#include <cassert>
 
 using namespace nvinfer1;
 

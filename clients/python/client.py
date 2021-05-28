@@ -161,9 +161,9 @@ if __name__ == '__main__':
         print("Creating emtpy buffer filled with ones...")
         inputs = []
         outputs = []
-        inputs.append(grpcclient.InferInput('data', [1, 3, 608, 608], "FP32"))
+        inputs.append(grpcclient.InferInput('input', [1, 3, 608, 608], "FP32"))
         inputs[0].set_data_from_numpy(np.ones(shape=(1, 3, 608, 608), dtype=np.float32))
-        outputs.append(grpcclient.InferRequestedOutput('prob'))
+        outputs.append(grpcclient.InferRequestedOutput('detections'))
 
         print("Invoking inference...")
         results = triton_client.infer(model_name=FLAGS.model,
@@ -178,7 +178,7 @@ if __name__ == '__main__':
             print(statistics)
         print("Done")
 
-        result = results.as_numpy('prob')
+        result = results.as_numpy('detections')
         print(f"Received result buffer of size {result.shape}")
         print(f"Naive buffer sum: {np.sum(result)}")
 
@@ -191,15 +191,15 @@ if __name__ == '__main__':
         
         inputs = []
         outputs = []
-        inputs.append(grpcclient.InferInput('data', [1, 3, 608, 608], "FP32"))
-        outputs.append(grpcclient.InferRequestedOutput('prob'))
+        inputs.append(grpcclient.InferInput('input', [1, 3, 608, 608], "FP32"))
+        outputs.append(grpcclient.InferRequestedOutput('detections'))
 
         print("Creating buffer from image file...")
         input_image = cv2.imread(str(FLAGS.input))
         if input_image is None:
             print(f"FAILED: could not load input image {str(FLAGS.input)}")
             sys.exit(1)
-        input_image_buffer = preprocess(input_image)
+        input_image_buffer = preprocess(input_image, [608, 608])
         input_image_buffer = np.expand_dims(input_image_buffer, axis=0)
         inputs[0].set_data_from_numpy(input_image_buffer)
 
@@ -216,12 +216,11 @@ if __name__ == '__main__':
             print(statistics)
         print("Done")
 
-        result = results.as_numpy('prob')
+        result = results.as_numpy('detections')
         print(f"Received result buffer of size {result.shape}")
         print(f"Naive buffer sum: {np.sum(result)}")
 
-        detected_objects = postprocess(result, input_image.shape[1], input_image.shape[0], FLAGS.confidence, FLAGS.nms)
-        print(f"Raw boxes: {int(result[0, 0, 0, 0])}")
+        detected_objects = postprocess(result, input_image.shape[1], input_image.shape[0], [608, 608], FLAGS.confidence, FLAGS.nms)
         print(f"Detected objects: {len(detected_objects)}")
 
         for box in detected_objects:
@@ -248,8 +247,8 @@ if __name__ == '__main__':
 
         inputs = []
         outputs = []
-        inputs.append(grpcclient.InferInput('data', [1, 3, 608, 608], "FP32"))
-        outputs.append(grpcclient.InferRequestedOutput('prob'))
+        inputs.append(grpcclient.InferInput('input', [1, 3, 608, 608], "FP32"))
+        outputs.append(grpcclient.InferRequestedOutput('detections'))
 
         print("Opening input video stream...")
         cap = cv2.VideoCapture(FLAGS.input)
@@ -271,7 +270,7 @@ if __name__ == '__main__':
                 fourcc = cv2.VideoWriter_fourcc('M', 'P', '4', 'V')
                 out = cv2.VideoWriter(FLAGS.out, fourcc, FLAGS.fps, (frame.shape[1], frame.shape[0]))
 
-            input_image_buffer = preprocess(frame)
+            input_image_buffer = preprocess(frame, [608, 608])
             input_image_buffer = np.expand_dims(input_image_buffer, axis=0)
             inputs[0].set_data_from_numpy(input_image_buffer)
 
@@ -280,9 +279,10 @@ if __name__ == '__main__':
                                     outputs=outputs,
                                     client_timeout=FLAGS.client_timeout)
 
-            result = results.as_numpy('prob')
-            detected_objects = postprocess(result, frame.shape[1], frame.shape[0], FLAGS.confidence, FLAGS.nms)
-            print(f"Frame {counter}: {int(result[0, 0, 0, 0])} raw boxes, {len(detected_objects)} objects")
+            result = results.as_numpy('detections')
+
+            detected_objects = postprocess(result, frame.shape[1], frame.shape[0], [608, 608], FLAGS.confidence, FLAGS.nms)
+            print(f"Frame {counter}: {len(detected_objects)} objects")
             counter += 1
 
             for box in detected_objects:

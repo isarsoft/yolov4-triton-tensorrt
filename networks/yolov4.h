@@ -14,9 +14,21 @@ namespace yolov4 {
     static const int INPUT_H = 608;
     static const int INPUT_W = 608;
     static const int CLASS_NUM = 80;
-    static const std::vector<float> anchors1 = { 12,16, 19,36, 40,28 };
-    static const std::vector<float> anchors2 = { 36,75, 76,55, 72,146 };
-    static const std::vector<float> anchors3 = { 142,110, 192,243, 459,401 };
+
+    static const int YOLO_FACTOR_1 = 8;
+    static const std::vector<float> YOLO_ANCHORS_1 = { 12,16, 19,36, 40,28 };
+    static const float YOLO_SCALE_XY_1 = 1.2f;
+    static const int YOLO_NEWCOORDS_1 = 0;
+
+    static const int YOLO_FACTOR_2 = 16;
+    static const std::vector<float> YOLO_ANCHORS_2 = { 36,75, 76,55, 72,146 };
+    static const float YOLO_SCALE_XY_2 = 1.1f;
+    static const int YOLO_NEWCOORDS_2 = 0;
+
+    static const int YOLO_FACTOR_3 = 32;
+    static const std::vector<float> YOLO_ANCHORS_3 = { 142,110, 192,243, 459,401 };
+    static const float YOLO_SCALE_XY_3 = 1.05f;
+    static const int YOLO_NEWCOORDS_3 = 0;
 
     const char* INPUT_BLOB_NAME = "input";
     const char* OUTPUT_BLOB_NAME = "detections";
@@ -317,7 +329,7 @@ namespace yolov4 {
         assert(conv138);
 
         // 139 is yolo layer
-        auto yolo139 = yoloLayer(network, *conv138->getOutput(0), INPUT_W, INPUT_H, 8, 8, CLASS_NUM, anchors1, 1.2f, 0);
+        auto yolo139 = yoloLayer(network, *conv138->getOutput(0), INPUT_W, INPUT_H, YOLO_FACTOR_1, YOLO_FACTOR_1, CLASS_NUM, YOLO_ANCHORS_1, YOLO_SCALE_XY_1, YOLO_NEWCOORDS_1);
 
         auto l140 = l136;
         auto l141 = convBnLeaky(network, weightMap, *l140->getOutput(0), 256, 3, 2, 1, 141);
@@ -335,7 +347,7 @@ namespace yolov4 {
         assert(conv149);
 
         // 150 is yolo layer
-        auto yolo150 = yoloLayer(network, *conv149->getOutput(0), INPUT_W, INPUT_H, 16, 16, CLASS_NUM, anchors2, 1.1f, 0);
+        auto yolo150 = yoloLayer(network, *conv149->getOutput(0), INPUT_W, INPUT_H, YOLO_FACTOR_2, YOLO_FACTOR_2, CLASS_NUM, YOLO_ANCHORS_2, YOLO_SCALE_XY_2, YOLO_NEWCOORDS_2);
 
         auto l151 = l147;
         auto l152 = convBnLeaky(network, weightMap, *l151->getOutput(0), 512, 3, 2, 1, 152);
@@ -353,7 +365,7 @@ namespace yolov4 {
         assert(conv160);
 
         // 161 is yolo layer
-        auto yolo161 = yoloLayer(network, *conv160->getOutput(0), INPUT_W, INPUT_H, 32, 32, CLASS_NUM, anchors3, 1.05f, 0);
+        auto yolo161 = yoloLayer(network, *conv160->getOutput(0), INPUT_W, INPUT_H, YOLO_FACTOR_3, YOLO_FACTOR_3, CLASS_NUM, YOLO_ANCHORS_3, YOLO_SCALE_XY_3, YOLO_NEWCOORDS_3);
         
         ITensor* inputTensors162[] = {yolo139->getOutput(0), yolo150->getOutput(0), yolo161->getOutput(0)};
         auto cat162 = network->addConcatenation(inputTensors162, 3);

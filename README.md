@@ -154,7 +154,7 @@ Results are total frames per second (FPS) of all clients combined and average la
 - [x] Remove MISH plugin and replace by standard activation layers (see [3b in this blog](https://jkjung-avt.github.io/tensorrt-yolov4/) for the idea)
 - [ ] INT8 optimization
 - [x] General optimizations (using [this darknet->onnx->tensorrt export](https://github.com/Tianxiaomo/pytorch-YOLOv4#5-onnx2tensorrt-evolving) with --best flag gives 572 FPS / (batchsize 8) and 392 FPS / (batchsize 1) without full INT8 calibration)
-- [ ] YOLOv4 tiny (example is [here](https://github.com/tjuskyzhang/yolov4-tiny-tensorrt))
+- [x] YOLOv4 tiny (example is [here](https://github.com/tjuskyzhang/yolov4-tiny-tensorrt))
 - [ ] YOLOv5
 - [x] Add Triton client code in python
 - [x] Add image pre and postprocessing code
@@ -164,4 +164,4 @@ Results are total frames per second (FPS) of all clients combined and average la
 
 ## Acknowledgments
 
-The initial codebase is from [Wang Xinyu](https://github.com/wang-xinyu) in his [TensorRTx](https://github.com/wang-xinyu/tensorrtx) repo. He had the idea to implement YOLO using only the TensorRT API and its very nice he shares this code. This repo has the purpose to deploy this engine and plugin to Triton and to add additional perfomance improvements to the TensorRT engine.
+The initial codebase is from [Wang Xinyu](https://github.com/wang-xinyu) in his [TensorRTx](https://github.com/wang-xinyu/tensorrtx) repo. He had the idea to implement YOLO using only the TensorRT API and its very nice he shares this code. The yolo layer plugin has been continously improved by [jkjung-avt](https://github.com/jkjung-avt) in his repo [tensorrt_demos](https://github.com/jkjung-avt/tensorrt_demos). This repo has the purpose to deploy this engine and plugin to Triton and to add additional perfomance improvements to the TensorRT engine.

@@ -75,6 +75,22 @@ namespace yolov4tiny {
 
         return lr;
     }
+
+    ILayer *upSample(INetworkDefinition *network, std::map<std::string, Weights> &weightMap, ITensor &input, int channels)
+    {
+        float *deval = reinterpret_cast<float *>(malloc(sizeof(float) * channels * 2 * 2));
+        for (int i = 0; i < channels * 2 * 2; i++)
+        {
+            deval[i] = 1.0;
+        }
+        Weights deconvwts{DataType::kFLOAT, deval, channels * 2 * 2};
+        Weights emptywts{DataType::kFLOAT, nullptr, 0};
+        IDeconvolutionLayer *deconv = network->addDeconvolutionNd(input, channels, DimsHW{2, 2}, deconvwts, emptywts);
+        deconv->setStrideNd(DimsHW{2, 2});
+        deconv->setNbGroups(channels);
+
+        return deconv;
+    }
     
     IPluginV2Layer * yoloLayer(INetworkDefinition *network, ITensor& input, int inputWidth, int inputHeight, int widthFactor, int heightFactor, int numClasses, const std::vector<float>& anchors, float scaleXY, int newCoords) {
         auto creator = getPluginRegistry()->getPluginCreator("YoloLayer_TRT", "1");
@@ -109,7 +125,6 @@ namespace yolov4tiny {
         assert(data);
 
         std::map<std::string, Weights> weightMap = loadWeights(weightsPath);
-        Weights emptywts{DataType::kFLOAT, nullptr, 0};
 
         // define each layer.
         auto l0 = convBnLeaky(network, weightMap, *data, 32, 3, 2, 1, 0);
@@ -158,17 +173,7 @@ namespace yolov4tiny {
 
         auto l31 = l27;
         auto l32 = convBnLeaky(network, weightMap, *l31->getOutput(0), 128, 1, 1, 0, 32);
-        float *deval = reinterpret_cast<float *>(malloc(sizeof(float) * 128 * 2 * 2));
-        for (int i = 0; i < 128 * 2 * 2; i++)
-        {
-            deval[i] = 1.0;
-        }
-        Weights deconvwts33{DataType::kFLOAT, deval, 128 * 2 * 2};
-        IDeconvolutionLayer *deconv33 = network->addDeconvolutionNd(*l32->getOutput(0), 128, DimsHW{2, 2}, deconvwts33, emptywts);
-        assert(deconv33);
-        deconv33->setStrideNd(DimsHW{2, 2});
-        deconv33->setNbGroups(128);
-        weightMap["deconv33"] = deconvwts33;
+        auto deconv33 = upSample(network, weightMap, *l32->getOutput(0), 128);
         ITensor *inputTensors34[] = {deconv33->getOutput(0), l23->getOutput(0)};
         auto cat34 = network->addConcatenation(inputTensors34, 2);
         auto l35 = convBnLeaky(network, weightMap, *cat34->getOutput(0), 256, 3, 1, 1, 35);

@@ -35,10 +35,10 @@ TRUCK: 0.9168747067451477
 Full features of this client:
 
 ```
-usage: client.py [-h] [-m MODEL] [-u URL] [-o OUT] [-c CONFIDENCE] [-n NMS]
-                 [-f FPS] [-i] [-v] [-t CLIENT_TIMEOUT] [-s]
-                 [-r ROOT_CERTIFICATES] [-p PRIVATE_KEY]
-                 [-x CERTIFICATE_CHAIN]
+usage: client.py [-h] [-m MODEL] [--width WIDTH] [--height HEIGHT] [-u URL]
+                 [-o OUT] [-c CONFIDENCE] [-n NMS] [-f FPS] [-i] [-v]
+                 [-t CLIENT_TIMEOUT] [-s] [-r ROOT_CERTIFICATES]
+                 [-p PRIVATE_KEY] [-x CERTIFICATE_CHAIN]
                  {dummy,image,video} [input]
 
 positional arguments:
@@ -51,6 +51,8 @@ optional arguments:
   -h, --help            show this help message and exit
   -m MODEL, --model MODEL
                         Inference model name, default yolov4
+  --width WIDTH         Inference model input width, default 608
+  --height HEIGHT       Inference model input height, default 608
   -u URL, --url URL     Inference server URL, default localhost:8001
   -o OUT, --out OUT     Write output into file instead of displaying it
   -c CONFIDENCE, --confidence CONFIDENCE

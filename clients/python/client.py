@@ -28,6 +28,16 @@ if __name__ == '__main__':
                         required=False,
                         default='yolov4',
                         help='Inference model name, default yolov4')
+    parser.add_argument('--width',
+                        type=int,
+                        required=False,
+                        default=608,
+                        help='Inference model input width, default 608')
+    parser.add_argument('--height',
+                        type=int,
+                        required=False,
+                        default=608,
+                        help='Inference model input height, default 608')
     parser.add_argument('-u',
                         '--url',
                         type=str,
@@ -161,8 +171,8 @@ if __name__ == '__main__':
         print("Creating emtpy buffer filled with ones...")
         inputs = []
         outputs = []
-        inputs.append(grpcclient.InferInput('input', [1, 3, 608, 608], "FP32"))
-        inputs[0].set_data_from_numpy(np.ones(shape=(1, 3, 608, 608), dtype=np.float32))
+        inputs.append(grpcclient.InferInput('input', [1, 3, FLAGS.width, FLAGS.height], "FP32"))
+        inputs[0].set_data_from_numpy(np.ones(shape=(1, 3, FLAGS.width, FLAGS.height), dtype=np.float32))
         outputs.append(grpcclient.InferRequestedOutput('detections'))
 
         print("Invoking inference...")
@@ -191,7 +201,7 @@ if __name__ == '__main__':
         
         inputs = []
         outputs = []
-        inputs.append(grpcclient.InferInput('input', [1, 3, 608, 608], "FP32"))
+        inputs.append(grpcclient.InferInput('input', [1, 3, FLAGS.width, FLAGS.height], "FP32"))
         outputs.append(grpcclient.InferRequestedOutput('detections'))
 
         print("Creating buffer from image file...")
@@ -199,7 +209,7 @@ if __name__ == '__main__':
         if input_image is None:
             print(f"FAILED: could not load input image {str(FLAGS.input)}")
             sys.exit(1)
-        input_image_buffer = preprocess(input_image, [608, 608])
+        input_image_buffer = preprocess(input_image, [FLAGS.width, FLAGS.height])
         input_image_buffer = np.expand_dims(input_image_buffer, axis=0)
         inputs[0].set_data_from_numpy(input_image_buffer)
 
@@ -220,7 +230,7 @@ if __name__ == '__main__':
         print(f"Received result buffer of size {result.shape}")
         print(f"Naive buffer sum: {np.sum(result)}")
 
-        detected_objects = postprocess(result, input_image.shape[1], input_image.shape[0], [608, 608], FLAGS.confidence, FLAGS.nms)
+        detected_objects = postprocess(result, input_image.shape[1], input_image.shape[0], [FLAGS.width, FLAGS.height], FLAGS.confidence, FLAGS.nms)
         print(f"Detected objects: {len(detected_objects)}")
 
         for box in detected_objects:
@@ -247,7 +257,7 @@ if __name__ == '__main__':
 
         inputs = []
         outputs = []
-        inputs.append(grpcclient.InferInput('input', [1, 3, 608, 608], "FP32"))
+        inputs.append(grpcclient.InferInput('input', [1, 3, FLAGS.width, FLAGS.height], "FP32"))
         outputs.append(grpcclient.InferRequestedOutput('detections'))
 
         print("Opening input video stream...")
@@ -270,7 +280,7 @@ if __name__ == '__main__':
                 fourcc = cv2.VideoWriter_fourcc('M', 'P', '4', 'V')
                 out = cv2.VideoWriter(FLAGS.out, fourcc, FLAGS.fps, (frame.shape[1], frame.shape[0]))
 
-            input_image_buffer = preprocess(frame, [608, 608])
+            input_image_buffer = preprocess(frame, [FLAGS.width, FLAGS.height])
             input_image_buffer = np.expand_dims(input_image_buffer, axis=0)
             inputs[0].set_data_from_numpy(input_image_buffer)
 
@@ -281,7 +291,7 @@ if __name__ == '__main__':
 
             result = results.as_numpy('detections')
 
-            detected_objects = postprocess(result, frame.shape[1], frame.shape[0], [608, 608], FLAGS.confidence, FLAGS.nms)
+            detected_objects = postprocess(result, frame.shape[1], frame.shape[0], [FLAGS.width, FLAGS.height], FLAGS.confidence, FLAGS.nms)
             print(f"Frame {counter}: {len(detected_objects)} objects")
             counter += 1
 

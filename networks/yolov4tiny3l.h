@@ -68,12 +68,12 @@ namespace yolov4tiny3l {
 
     ILayer* convBnLeaky(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, ITensor& input, int outch, int ksize, int s, int p, int linx) {
         Weights emptywts{DataType::kFLOAT, nullptr, 0};
-        IConvolutionLayer* conv1 = network->addConvolutionNd(input, outch, DimsHW{ksize, ksize}, weightMap["module_list." + std::to_string(linx) + ".Conv2d.weight"], emptywts);
+        IConvolutionLayer* conv1 = network->addConvolutionNd(input, outch, DimsHW{ksize, ksize}, weightMap["model." + std::to_string(linx) + ".conv.weight"], emptywts);
         assert(conv1);
         conv1->setStrideNd(DimsHW{s, s});
         conv1->setPaddingNd(DimsHW{p, p});
 
-        IScaleLayer* bn1 = addBatchNorm2d(network, weightMap, *conv1->getOutput(0), "module_list." + std::to_string(linx) + ".BatchNorm2d", 1e-4);
+        IScaleLayer* bn1 = addBatchNorm2d(network, weightMap, *conv1->getOutput(0), "model." + std::to_string(linx) + ".bn", 1e-4);
 
         auto lr = network->addActivation(*bn1->getOutput(0), ActivationType::kLEAKY_RELU);
         lr->setAlpha(0.1);
@@ -170,7 +170,7 @@ namespace yolov4tiny3l {
         auto l26 = convBnLeaky(network, weightMap, *pool25->getOutput(0), 512, 3, 1, 1, 26);
         auto l27 = convBnLeaky(network, weightMap, *l26->getOutput(0), 256, 1, 1, 0, 27);
         auto l28 = convBnLeaky(network, weightMap, *l27->getOutput(0), 512, 3, 1, 1, 28);
-        IConvolutionLayer* conv29 = network->addConvolutionNd(*l28->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["module_list.29.Conv2d.weight"], weightMap["module_list.29.Conv2d.bias"]);
+        IConvolutionLayer* conv29 = network->addConvolutionNd(*l28->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["model.29.conv.weight"], weightMap["model.29.conv.bias"]);
         assert(conv29);
 
         // 30 is a yolo layer
@@ -182,7 +182,7 @@ namespace yolov4tiny3l {
         ITensor* inputTensors34[] = {deconv33->getOutput(0), l23->getOutput(0)};
         auto cat34 = network->addConcatenation(inputTensors34, 2);
         auto l35 = convBnLeaky(network, weightMap, *cat34->getOutput(0), 256, 3, 1, 1, 35);
-        IConvolutionLayer* conv36 = network->addConvolutionNd(*l35->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["module_list.36.Conv2d.weight"], weightMap["module_list.36.Conv2d.bias"]);
+        IConvolutionLayer* conv36 = network->addConvolutionNd(*l35->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["model.36.conv.weight"], weightMap["model.36.conv.bias"]);
         assert(conv36);
 
         // 37 is a yolo layer
@@ -194,7 +194,7 @@ namespace yolov4tiny3l {
         ITensor* inputTensors41[] = {deconv40->getOutput(0), l15->getOutput(0)};
         auto cat41 = network->addConcatenation(inputTensors41, 2);
         auto l42 = convBnLeaky(network, weightMap, *cat41->getOutput(0), 128, 3, 1, 1, 42);
-        IConvolutionLayer* conv43 = network->addConvolutionNd(*l42->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["module_list.43.Conv2d.weight"], weightMap["module_list.43.Conv2d.bias"]);
+        IConvolutionLayer* conv43 = network->addConvolutionNd(*l42->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["model.43.conv.weight"], weightMap["model.43.conv.bias"]);
         assert(conv43);
 
         // 44 is a yolo layer

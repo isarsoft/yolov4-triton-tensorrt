@@ -117,7 +117,7 @@ perf_client -m yolov4 -u 127.0.0.1:8001 -i grpc --shared-memory system --concurr
 Alternatively you can get the Triton Client SDK docker container.
 
 ```bash
-docker run -it --ipc=host --net=host nvcr.io/nvidia/tritonserver:21.03-py3-clientsdk /bin/bash
+docker run -it --ipc=host --net=host nvcr.io/nvidia/tritonserver:21.03-py3-sdk /bin/bash
 cd install/bin
 ./perf_client (...argumentshere)
 # Example

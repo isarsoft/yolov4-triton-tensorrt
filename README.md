@@ -147,6 +147,10 @@ Results are total frames per second (FPS) of all clients combined and average la
 | 4           | 58.6 FPS  *68.1 ms* | 69.6 FPS  *229 ms*  | 72.0 FPS  *436 ms* | 137.0 FPS  *29.2 ms*     | 206.4 FPS  *77.3 ms* | 227.2 FPS  *141 ms*      |
 | 8           | 58.4 FPS  *136 ms*  | 68.8 FPS  *460 ms*  | 72.0 FPS  *874 ms* | 136.8 FPS  *58.4 ms*     | 206.4 FPS  *154 ms*  | 227.2 FPS  *282 ms*      |
 
+## Contributions
+
+- [olibartfast](https://github.com/olibartfast) with a c++ client example
+
 ## Tasks in this repo
 
 - [x] Layer plugin working with trtexec and Triton

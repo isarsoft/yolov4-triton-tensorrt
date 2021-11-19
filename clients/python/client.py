@@ -6,7 +6,8 @@ import sys
 import cv2
 
 import tritonclient.grpc as grpcclient
-from tritonclient.utils import InferenceServerException
+from tritonclient.utils import InferenceServerException, triton_to_np_dtype
+import tritonclient.utils.shared_memory as shm
 
 from processing import preprocess, postprocess
 from render import render_box, render_filled_box, get_text_size, render_text, RAND_COLORS
@@ -110,6 +111,11 @@ if __name__ == '__main__':
                         required=False,
                         default=None,
                         help='File holding PEM-encoded certicate chain default is none')
+    parser.add_argument('--shm',
+                        action="store_true",
+                        required=False,
+                        default=False,
+                        help='Enable system shared memory')
 
     FLAGS = parser.parse_args()
 
@@ -134,7 +140,7 @@ if __name__ == '__main__':
     if not triton_client.is_server_ready():
         print("FAILED : is_server_ready")
         sys.exit(1)
-    
+
     if not triton_client.is_model_ready(FLAGS.model):
         print("FAILED : is_model_ready")
         sys.exit(1)
@@ -165,6 +171,36 @@ if __name__ == '__main__':
             print("Got: {}".format(ex.message()))
             sys.exit(1)
 
+    # Shared Memory Mode
+    if FLAGS.shm:
+        # To make sure no shared memory regions are registered with the server
+        triton_client.unregister_system_shared_memory()
+        triton_client.unregister_cuda_shared_memory()
+        # Create the data for the two input tensors. Initialize to all ones
+        input_data = np.ones(
+            shape=(1, 3, FLAGS.width, FLAGS.height), dtype=np.float32)
+
+        input_byte_size = input_data.size * input_data.itemsize
+        output_byte_size = input_byte_size
+
+        # Create Output in Shared Memory and store shared memory handles
+        shm_op_handle = shm.create_shared_memory_region("output_data",
+                                                        "/output_simple",
+                                                        output_byte_size)
+        # Register Output shared memory with Triton Server
+        triton_client.register_system_shared_memory("output_data",
+                                                    "/output_simple",
+                                                    output_byte_size)
+        # Create Input in Shared Memory and store shared memory handles
+        shm_ip_handle = shm.create_shared_memory_region("input_data",
+                                                        "/input_simple",
+                                                        input_byte_size)
+
+        # Register Input shared memory with Triton Server
+        triton_client.register_system_shared_memory("input_data",
+                                                    "/input_simple",
+                                                    input_byte_size)
+
     # DUMMY MODE
     if FLAGS.mode == 'dummy':
         print("Running in 'dummy' mode")
@@ -177,9 +213,9 @@ if __name__ == '__main__':
 
         print("Invoking inference...")
         results = triton_client.infer(model_name=FLAGS.model,
-                                    inputs=inputs,
-                                    outputs=outputs,
-                                    client_timeout=FLAGS.client_timeout)
+                                      inputs=inputs,
+                                      outputs=outputs,
+                                      client_timeout=FLAGS.client_timeout)
         if FLAGS.model_info:
             statistics = triton_client.get_inference_statistics(model_name=FLAGS.model)
             if len(statistics.model_stats) != 1:
@@ -198,11 +234,18 @@ if __name__ == '__main__':
         if not FLAGS.input:
             print("FAILED: no input image")
             sys.exit(1)
-        
+
         inputs = []
         outputs = []
         inputs.append(grpcclient.InferInput('input', [1, 3, FLAGS.width, FLAGS.height], "FP32"))
         outputs.append(grpcclient.InferRequestedOutput('detections'))
+
+        if FLAGS.shm:
+            # Set the parameters to use data from shared memory
+            inputs[-1].set_shared_memory("input_data", input_byte_size)
+            outputs[-1].set_shared_memory("output_data", output_byte_size)
+            print("shared_memory_status:",
+                  triton_client.get_system_shared_memory_status())
 
         print("Creating buffer from image file...")
         input_image = cv2.imread(str(FLAGS.input))
@@ -211,13 +254,17 @@ if __name__ == '__main__':
             sys.exit(1)
         input_image_buffer = preprocess(input_image, [FLAGS.width, FLAGS.height])
         input_image_buffer = np.expand_dims(input_image_buffer, axis=0)
-        inputs[0].set_data_from_numpy(input_image_buffer)
+
+        if FLAGS.shm:
+            shm.set_shared_memory_region(shm_ip_handle, [input_image_buffer])
+        else:
+            inputs[0].set_data_from_numpy(input_image_buffer)
 
         print("Invoking inference...")
         results = triton_client.infer(model_name=FLAGS.model,
-                                    inputs=inputs,
-                                    outputs=outputs,
-                                    client_timeout=FLAGS.client_timeout)
+                                      inputs=inputs,
+                                      outputs=outputs,
+                                      client_timeout=FLAGS.client_timeout)
         if FLAGS.model_info:
             statistics = triton_client.get_inference_statistics(model_name=FLAGS.model)
             if len(statistics.model_stats) != 1:
@@ -226,9 +273,20 @@ if __name__ == '__main__':
             print(statistics)
         print("Done")
 
-        result = results.as_numpy('detections')
-        print(f"Received result buffer of size {result.shape}")
-        print(f"Naive buffer sum: {np.sum(result)}")
+        if FLAGS.shm:
+            # Read results from the shared memory
+            output_buffer = results.get_output("detections")
+            if output_buffer is not None:
+                result = shm.get_contents_as_numpy(
+                    shm_op_handle, triton_to_np_dtype(output_buffer.datatype),
+                    output_buffer.shape)
+            else:
+                print("'detections' is missing in the response")
+                sys.exit(1)
+        else:
+            result = results.as_numpy('detections')
+            print(f"Received result buffer of size {result.shape}")
+            print(f"Naive buffer sum: {np.sum(result)}")
 
         detected_objects = postprocess(result, input_image.shape[1], input_image.shape[0], [FLAGS.width, FLAGS.height], FLAGS.confidence, FLAGS.nms)
         print(f"Detected objects: {len(detected_objects)}")
@@ -248,6 +306,15 @@ if __name__ == '__main__':
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
+        if FLAGS.shm:
+            print("Cleanup shared memory...")
+            triton_client.unregister_system_shared_memory()
+            triton_client.unregister_cuda_shared_memory()
+            shm.destroy_shared_memory_region(shm_ip_handle)
+            shm.destroy_shared_memory_region(shm_op_handle)
+            print("shared_memory_status:",
+                  triton_client.get_system_shared_memory_status())
+
     # VIDEO MODE
     if FLAGS.mode == 'video':
         print("Running in 'video' mode")
@@ -259,6 +326,13 @@ if __name__ == '__main__':
         outputs = []
         inputs.append(grpcclient.InferInput('input', [1, 3, FLAGS.width, FLAGS.height], "FP32"))
         outputs.append(grpcclient.InferRequestedOutput('detections'))
+
+        if FLAGS.shm:
+            # Set the parameters to use data from shared memory
+            inputs[-1].set_shared_memory("input_data", input_byte_size)
+            outputs[-1].set_shared_memory("output_data", output_byte_size)
+            print("shared_memory_status:",
+                  triton_client.get_system_shared_memory_status())
 
         print("Opening input video stream...")
         cap = cv2.VideoCapture(FLAGS.input)
@@ -282,14 +356,31 @@ if __name__ == '__main__':
 
             input_image_buffer = preprocess(frame, [FLAGS.width, FLAGS.height])
             input_image_buffer = np.expand_dims(input_image_buffer, axis=0)
-            inputs[0].set_data_from_numpy(input_image_buffer)
+
+            if FLAGS.shm:
+                shm.set_shared_memory_region(
+                    shm_ip_handle, [input_image_buffer])
+            else:
+                inputs[0].set_data_from_numpy(input_image_buffer)
 
             results = triton_client.infer(model_name=FLAGS.model,
-                                    inputs=inputs,
-                                    outputs=outputs,
-                                    client_timeout=FLAGS.client_timeout)
+                                          inputs=inputs,
+                                          outputs=outputs,
+                                          client_timeout=FLAGS.client_timeout)
 
-            result = results.as_numpy('detections')
+            if FLAGS.shm:
+                # Read results from the shared memory
+                output_buffer = results.get_output("detections")
+                if output_buffer is not None:
+                    result = shm.get_contents_as_numpy(
+                        shm_op_handle, triton_to_np_dtype(
+                            output_buffer.datatype),
+                        output_buffer.shape)
+                else:
+                    print("'detections' is missing in the response")
+                    sys.exit(1)
+            else:
+                result = results.as_numpy('detections')
 
             detected_objects = postprocess(result, frame.shape[1], frame.shape[0], [FLAGS.width, FLAGS.height], FLAGS.confidence, FLAGS.nms)
             print(f"Frame {counter}: {len(detected_objects)} objects")
@@ -322,4 +413,14 @@ if __name__ == '__main__':
             out.release()
         else:
             cv2.destroyAllWindows()
+
+        if FLAGS.shm:
+            print("Cleanup shared memory...")
+            triton_client.unregister_system_shared_memory()
+            triton_client.unregister_cuda_shared_memory()
+            shm.destroy_shared_memory_region(shm_ip_handle)
+            shm.destroy_shared_memory_region(shm_op_handle)
+            print("shared_memory_status:",
+                  triton_client.get_system_shared_memory_status())
+
         print("Done")

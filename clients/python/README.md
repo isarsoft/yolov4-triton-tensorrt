@@ -38,7 +38,7 @@ Full features of this client:
 usage: client.py [-h] [-m MODEL] [--width WIDTH] [--height HEIGHT] [-u URL]
                  [-o OUT] [-c CONFIDENCE] [-n NMS] [-f FPS] [-i] [-v]
                  [-t CLIENT_TIMEOUT] [-s] [-r ROOT_CERTIFICATES]
-                 [-p PRIVATE_KEY] [-x CERTIFICATE_CHAIN]
+                 [-p PRIVATE_KEY] [-x CERTIFICATE_CHAIN] [--shm]
                  {dummy,image,video} [input]
 
 positional arguments:
@@ -73,4 +73,5 @@ optional arguments:
   -x CERTIFICATE_CHAIN, --certificate-chain CERTIFICATE_CHAIN
                         File holding PEM-encoded certicate chain default is
                         none
+  --shm                 Enable system shared memory
 ```

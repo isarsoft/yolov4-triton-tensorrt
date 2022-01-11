@@ -150,6 +150,7 @@ Results are total frames per second (FPS) of all clients combined and average la
 ## Contributions
 
 - [olibartfast](https://github.com/olibartfast) with a c++ client example
+- [t-wata](https://github.com/t-wata) with shared memory support for the python client
 
 ## Tasks in this repo
 

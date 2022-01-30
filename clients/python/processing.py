@@ -128,5 +128,5 @@ def postprocess(output, img_w, img_h, input_shape, conf_th=0.8, nms_threshold=0.
         classes = nms_detections[:, 5].astype(np.int)
     detected_objects = []
     for box, score, label in zip(boxes, scores, classes):
-        detected_objects.append(BoundingBox(label, score, box[0], box[2], box[1], box[3], img_h, img_w))
+        detected_objects.append(BoundingBox(label, score, box[0], box[2], box[1], box[3], img_w, img_h))
     return detected_objects

@@ -3,35 +3,61 @@
 #include <cmath>
 
 #include "../utils/weights.h"
-
+#include <vector>
+#include <string>
 using namespace nvinfer1;
 
 #define USE_FP16
 
 namespace yolov4tiny3l {
 
+
+
+  struct yolov4tiny3lParameters{
     // stuff we know about the network and the input/output blobs
-    static const int INPUT_H = 416;
-    static const int INPUT_W = 416;
-    static const int CLASS_NUM = 80;
+          int INPUT_H = 416;
+          int INPUT_W = 416;
+          int CLASS_NUM = 80;
 
-    static const int YOLO_FACTOR_1 = 32;
-    static const std::vector<float> YOLO_ANCHORS_1 = { 142,110, 192,243, 459,401 };
-    static const float YOLO_SCALE_XY_1 = 1.05f;
-    static const int YOLO_NEWCOORDS_1 = 0;
+          int YOLO_FACTOR_1 = 32;
+          std::vector<float> YOLO_ANCHORS_1 = { 81,82, 135,169, 344,319 };
+          float YOLO_SCALE_XY_1 = 1.05f;
+          int YOLO_NEWCOORDS_1 = 0;
 
-    static const int YOLO_FACTOR_2 = 16;
-    static const std::vector<float> YOLO_ANCHORS_2 = { 36,75, 76,55, 72,146 };
-    static const float YOLO_SCALE_XY_2 = 1.05f;
-    static const int YOLO_NEWCOORDS_2 = 0;
+          int YOLO_FACTOR_2 = 16;
+          int YOLO_FACTOR_3 = 8;
+          std::vector<float> YOLO_ANCHORS_2 = { 23,27, 37,58, 81,82 };
+          float YOLO_SCALE_XY_2 = 1.05f;
+          float YOLO_SCALE_XY_3 = 1.05f;
+          int YOLO_NEWCOORDS_2 = 0;
+          int YOLO_NEWCOORDS_3 = 0;
+          int BATCH_SIZE;
+          std::vector<float> YOLO_ANCHORS_3 = { 12,16, 19,36, 40,28 };
 
-    static const int YOLO_FACTOR_3 = 8;
-    static const std::vector<float> YOLO_ANCHORS_3 = { 12,16, 19,36, 40,28 };
-    static const float YOLO_SCALE_XY_3 = 1.05f;
-    static const int YOLO_NEWCOORDS_3 = 0;
+          std::string WEIGHTS_PATH;
+          const char* INPUT_BLOB_NAME = "input";
+          const char* OUTPUT_BLOB_NAME = "detections";
+          yolov4tiny3lParameters():CLASS_NUM(80),INPUT_H(416),INPUT_W(416),YOLO_FACTOR_1(32),YOLO_FACTOR_2(16),YOLO_FACTOR_3(8),YOLO_SCALE_XY_1(1.05f),YOLO_SCALE_XY_2(1.05f),YOLO_SCALE_XY_3(1.05f),
+                             YOLO_NEWCOORDS_1(0),YOLO_NEWCOORDS_2(0),YOLO_NEWCOORDS_3(0),BATCH_SIZE(1),WEIGHTS_PATH("idontexist")
+          {
 
-    const char* INPUT_BLOB_NAME = "input";
-    const char* OUTPUT_BLOB_NAME = "detections";
+          }
+          void display() const{
+
+                  //DISPLAY THE CONFIGURATION
+                  std::cout << "YOLO PARAMETERS \n";
+                  std::cout << "********************************************\n";
+                  std::cout << "CLASS_NUM "<< CLASS_NUM << " \n";
+                  std::cout << "INPUT_H INPUT_W "<< INPUT_H << " " << INPUT_W << " \n";
+                  std::cout << "YOLO_FACTORS "<< YOLO_FACTOR_1 << " " << YOLO_FACTOR_2 <<  " " << YOLO_FACTOR_3 <<" \n";
+                  std::cout << "YOLO_SCALE_XY "<< YOLO_SCALE_XY_1 << " " << YOLO_SCALE_XY_2 << " "<<YOLO_SCALE_XY_3 << "  \n";
+                  std::cout << "YOLO_NEWCOORDS "<< YOLO_NEWCOORDS_1 << " " << YOLO_NEWCOORDS_2 << " "<< YOLO_NEWCOORDS_3 << " \n";
+                  std::cout << "BATCH_SIZE "<< BATCH_SIZE  << " \n";
+                  std::cout << "WEIGHTS_PATH "<< WEIGHTS_PATH << " \n";
+                  std::cout << "********************************************\n";
+          }
+          //TODO: Another constructor with the default parameters
+  };
 
     IScaleLayer* addBatchNorm2d(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, ITensor& input, std::string lname, float eps) {
         float *gamma = (float*)weightMap[lname + ".weight"].values;
@@ -122,20 +148,21 @@ namespace yolov4tiny3l {
         return network->addPluginV2(inputTensors, 1, *plugin);
     }
 
-    ICudaEngine *createEngine(unsigned int maxBatchSize, IBuilder *builder, IBuilderConfig *config, DataType dt, const std::string &weightsPath) {
+    ICudaEngine *createEngine(const yolov4tiny3lParameters &params, IBuilder *builder, IBuilderConfig *config, DataType dt) {
         INetworkDefinition *network = builder->createNetworkV2(0U);
 
-        // Create input tensor of shape {3, INPUT_H, INPUT_W} with name INPUT_BLOB_NAME
-        ITensor *data = network->addInput(INPUT_BLOB_NAME, dt, Dims3{3, INPUT_H, INPUT_W});
+        params.display();
+        // Create input tensor of shape {3, params.INPUT_H, params.INPUT_W} with name params.INPUT_BLOB_NAME
+        ITensor *data = network->addInput(params.INPUT_BLOB_NAME, dt, Dims3{3, params.INPUT_H, params.INPUT_W});
         assert(data);
 
-        std::map<std::string, Weights> weightMap = loadWeights(weightsPath);
+        std::map<std::string, Weights> weightMap = loadWeights(params.WEIGHTS_PATH);
 
         // define each layer.
         auto l0 = convBnLeaky(network, weightMap, *data, 32, 3, 2, 1, 0);
         auto l1 = convBnLeaky(network, weightMap, *l0->getOutput(0), 64, 3, 2, 1, 1);
         auto l2 = convBnLeaky(network, weightMap, *l1->getOutput(0), 64, 3, 1, 1, 2);
-        ISliceLayer *l3= network->addSlice(*l2->getOutput(0), Dims3{0, 0, 0}, Dims3{32, INPUT_W / 4, INPUT_H / 4}, Dims3{1, 1, 1});
+        ISliceLayer *l3= network->addSlice(*l2->getOutput(0), Dims3{0, 0, 0}, Dims3{32, params.INPUT_W / 4, params.INPUT_H / 4}, Dims3{1, 1, 1});
         auto l4 = convBnLeaky(network, weightMap, *l3->getOutput(0), 32, 3, 1, 1, 4);
         auto l5 = convBnLeaky(network, weightMap, *l4->getOutput(0), 32, 3, 1, 1, 5);
         ITensor *inputTensors6[] = {l5->getOutput(0), l4->getOutput(0)};
@@ -146,7 +173,7 @@ namespace yolov4tiny3l {
         auto pool9 = network->addPoolingNd(*cat8->getOutput(0), PoolingType::kMAX, DimsHW{2, 2});
         pool9->setStrideNd(DimsHW{2, 2});
         auto l10 = convBnLeaky(network, weightMap, *pool9->getOutput(0), 128, 3, 1, 1, 10);
-        ISliceLayer *l11 = network->addSlice(*l10->getOutput(0), Dims3{0, 0, 0}, Dims3{64, INPUT_W / 8, INPUT_H / 8}, Dims3{1, 1, 1});
+        ISliceLayer *l11 = network->addSlice(*l10->getOutput(0), Dims3{0, 0, 0}, Dims3{64, params.INPUT_W / 8, params.INPUT_H / 8}, Dims3{1, 1, 1});
         auto l12 = convBnLeaky(network, weightMap, *l11->getOutput(0), 64, 3, 1, 1, 12);
         auto l13 = convBnLeaky(network, weightMap, *l12->getOutput(0), 64, 3, 1, 1, 13);
         ITensor *inputTensors14[] = {l13->getOutput(0), l12->getOutput(0)};
@@ -157,7 +184,7 @@ namespace yolov4tiny3l {
         auto pool17 = network->addPoolingNd(*cat16->getOutput(0), PoolingType::kMAX, DimsHW{2, 2});
         pool17->setStrideNd(DimsHW{2, 2});
         auto l18 = convBnLeaky(network, weightMap, *pool17->getOutput(0), 256, 3, 1, 1, 18);
-        ISliceLayer *l19= network->addSlice(*l18->getOutput(0), Dims3{0, 0, 0}, Dims3{128, INPUT_W / 16, INPUT_H / 16}, Dims3{1, 1, 1});
+        ISliceLayer *l19= network->addSlice(*l18->getOutput(0), Dims3{0, 0, 0}, Dims3{128, params.INPUT_W / 16, params.INPUT_H / 16}, Dims3{1, 1, 1});
         auto l20 = convBnLeaky(network, weightMap, *l19->getOutput(0), 128, 3, 1, 1, 20);
         auto l21 = convBnLeaky(network, weightMap, *l20->getOutput(0), 128, 3, 1, 1, 21);
         ITensor* inputTensors22[] = {l21->getOutput(0), l20->getOutput(0)};
@@ -170,11 +197,11 @@ namespace yolov4tiny3l {
         auto l26 = convBnLeaky(network, weightMap, *pool25->getOutput(0), 512, 3, 1, 1, 26);
         auto l27 = convBnLeaky(network, weightMap, *l26->getOutput(0), 256, 1, 1, 0, 27);
         auto l28 = convBnLeaky(network, weightMap, *l27->getOutput(0), 512, 3, 1, 1, 28);
-        IConvolutionLayer* conv29 = network->addConvolutionNd(*l28->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["model.29.conv.weight"], weightMap["model.29.conv.bias"]);
+        IConvolutionLayer* conv29 = network->addConvolutionNd(*l28->getOutput(0), 3 * (params.CLASS_NUM + 5), DimsHW{1, 1}, weightMap["model.29.conv.weight"], weightMap["model.29.conv.bias"]);
         assert(conv29);
 
         // 30 is a yolo layer
-        auto yolo30 = yoloLayer(network, *conv29->getOutput(0), INPUT_W, INPUT_H, YOLO_FACTOR_1, YOLO_FACTOR_1, CLASS_NUM, YOLO_ANCHORS_1, YOLO_SCALE_XY_1, YOLO_NEWCOORDS_1);
+        auto yolo30 = yoloLayer(network, *conv29->getOutput(0), params.INPUT_W, params.INPUT_H, params.YOLO_FACTOR_1, params.YOLO_FACTOR_1, params.CLASS_NUM, params.YOLO_ANCHORS_1, params.YOLO_SCALE_XY_1, params.YOLO_NEWCOORDS_1);
 
         auto l31 = l27;
         auto l32 = convBnLeaky(network, weightMap, *l31->getOutput(0), 128, 1, 1, 0, 32);
@@ -182,11 +209,11 @@ namespace yolov4tiny3l {
         ITensor* inputTensors34[] = {deconv33->getOutput(0), l23->getOutput(0)};
         auto cat34 = network->addConcatenation(inputTensors34, 2);
         auto l35 = convBnLeaky(network, weightMap, *cat34->getOutput(0), 256, 3, 1, 1, 35);
-        IConvolutionLayer* conv36 = network->addConvolutionNd(*l35->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["model.36.conv.weight"], weightMap["model.36.conv.bias"]);
+        IConvolutionLayer* conv36 = network->addConvolutionNd(*l35->getOutput(0), 3 * (params.CLASS_NUM + 5), DimsHW{1, 1}, weightMap["model.36.conv.weight"], weightMap["model.36.conv.bias"]);
         assert(conv36);
 
         // 37 is a yolo layer
-        auto yolo37 = yoloLayer(network, *conv36->getOutput(0), INPUT_W, INPUT_H, YOLO_FACTOR_2, YOLO_FACTOR_2, CLASS_NUM, YOLO_ANCHORS_2, YOLO_SCALE_XY_2, YOLO_NEWCOORDS_2);
+        auto yolo37 = yoloLayer(network, *conv36->getOutput(0), params.INPUT_W, params.INPUT_H, params.YOLO_FACTOR_2, params.YOLO_FACTOR_2, params.CLASS_NUM, params.YOLO_ANCHORS_2, params.YOLO_SCALE_XY_2, params.YOLO_NEWCOORDS_2);
 
         auto l38 = l35;
         auto l39 = convBnLeaky(network, weightMap, *l38->getOutput(0), 64, 1, 1, 0, 39);
@@ -194,19 +221,19 @@ namespace yolov4tiny3l {
         ITensor* inputTensors41[] = {deconv40->getOutput(0), l15->getOutput(0)};
         auto cat41 = network->addConcatenation(inputTensors41, 2);
         auto l42 = convBnLeaky(network, weightMap, *cat41->getOutput(0), 128, 3, 1, 1, 42);
-        IConvolutionLayer* conv43 = network->addConvolutionNd(*l42->getOutput(0), 3 * (CLASS_NUM + 5), DimsHW{1, 1}, weightMap["model.43.conv.weight"], weightMap["model.43.conv.bias"]);
+        IConvolutionLayer* conv43 = network->addConvolutionNd(*l42->getOutput(0), 3 * (params.CLASS_NUM + 5), DimsHW{1, 1}, weightMap["model.43.conv.weight"], weightMap["model.43.conv.bias"]);
         assert(conv43);
 
         // 44 is a yolo layer
-        auto yolo44 = yoloLayer(network, *conv43->getOutput(0), INPUT_W, INPUT_H, YOLO_FACTOR_3, YOLO_FACTOR_3, CLASS_NUM, YOLO_ANCHORS_3, YOLO_SCALE_XY_3, YOLO_NEWCOORDS_3);
+        auto yolo44 = yoloLayer(network, *conv43->getOutput(0), params.INPUT_W, params.INPUT_H, params.YOLO_FACTOR_3, params.YOLO_FACTOR_3, params.CLASS_NUM, params.YOLO_ANCHORS_3, params.YOLO_SCALE_XY_3, params.YOLO_NEWCOORDS_3);
         
         ITensor* inputTensors45[] = {yolo30->getOutput(0), yolo37->getOutput(0), yolo44->getOutput(0)};
         auto cat45 = network->addConcatenation(inputTensors45, 2);
-        cat45->getOutput(0)->setName(OUTPUT_BLOB_NAME);
+        cat45->getOutput(0)->setName(params.OUTPUT_BLOB_NAME);
         network->markOutput(*cat45->getOutput(0));
 
         // Build engine
-        builder->setMaxBatchSize(maxBatchSize);
+        builder->setMaxBatchSize(params.BATCH_SIZE);
         config->setMaxWorkspaceSize(16 * (1 << 20)); // 16MB
     #ifdef USE_FP16
         config->setFlag(BuilderFlag::kFP16);

@@ -5,13 +5,10 @@
 
 
 #include "networks/yolov4p5.h"
-
-#ifndef THEIRS
-
+#include "networks/yolov4.h"
 #include "networks/yolov4tiny.h"
 #include "networks/yolov4tiny3l.h"
 #include "layers/yololayer.h"
-#endif
 // Don't remove unused include, necessary to correctly load and register tensorrt yolo plugin
 #include "utils/logging.h"
 
@@ -98,7 +95,7 @@ int main(int argc, char **argv) {
   // Create builder
   IBuilder *builder = createInferBuilder(gLogger);
   IBuilderConfig *config = builder->createBuilderConfig();
-
+  config->setMaxWorkspaceSize(5*1024*1024);
   // Create model to populate the network, then set the outputs and create an
   // engine
   float gd = 1.0f;
@@ -106,8 +103,12 @@ int main(int argc, char **argv) {
   ICudaEngine *engine;
   if (network == NETWORKS::YOLOV4) {
     std::cout << "[Info] Creating model yolov4" << std::endl;
-    // engine = yolov4::createEngine(BATCH_SIZE, builder, config, DataType::kFLOAT,
- // "yolov4.wts");
+    auto params = yolov4::yolov4Parameters();
+    params.WEIGHTS_PATH= WEIGHTS_PATH;
+    params.BATCH_SIZE = BATCH_SIZE;
+    params.INPUT_H = INPUT_H;
+    params.INPUT_W = INPUT_W;
+    engine = yolov4::createEngine(params, builder, config, DataType::kFLOAT);
   } else if (network == NETWORKS::YOLOV4P5) {
     std::cout << "[Info] Creating model yolov4p5" << std::endl;
     auto params = yolov4p5::yolov4p5Parameters();
@@ -121,10 +122,23 @@ int main(int argc, char **argv) {
     std::cout << "[Info] Creating model yolov4tiny" << std::endl;
     // engine = yolov4tiny::createEngine(BATCH_SIZE, builder, config,
                                       // DataType::kFLOAT, "yolov4tiny.wts");
+                                      //
+    auto params = yolov4tiny::yolov4tinyParameters();
+    params.WEIGHTS_PATH= WEIGHTS_PATH;
+    params.BATCH_SIZE = BATCH_SIZE;
+    params.INPUT_H = INPUT_H;
+    params.INPUT_W = INPUT_W;
+    engine = yolov4tiny::createEngine(params, builder, config,DataType::kFLOAT);
   } else if (network == NETWORKS::YOLOV4TINY3L) {
     std::cout << "[Info] Creating model yolov4tiny3l" << std::endl;
     // engine = yolov4tiny3l::createEngine(BATCH_SIZE, builder, config,
                                         // DataType::kFLOAT, "yolov4tiny3l.wts");
+    auto params = yolov4tiny3l::yolov4tiny3lParameters();
+    params.WEIGHTS_PATH= WEIGHTS_PATH;
+    params.BATCH_SIZE = BATCH_SIZE;
+    params.INPUT_H = INPUT_H;
+    params.INPUT_W = INPUT_W;
+    engine = yolov4tiny3l::createEngine(params, builder, config,DataType::kFLOAT);
   }
   assert(engine != nullptr);
 

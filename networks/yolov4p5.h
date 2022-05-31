@@ -96,49 +96,6 @@ std::vector<float> getAnchors(std::map<std::string, Weights>& weightMap)
     }
     return anchors_yolo;
 }
-
-// IPluginV2Layer* addYoLoLayer(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, IConvolutionLayer* det0, IConvolutionLayer* det1, IConvolutionLayer* det2)
-// {
-//   #ifdef THEIRS
-//       auto creator = getPluginRegistry()->getPluginCreator("YoloLayer_TRT", "1");
-//     std::vector<float> anchors_yolo = getAnchors(weightMap);
-//     PluginField pluginMultidata[4];
-//     int NetData[4];
-//     NetData[0] = Yolo::CLASS_NUM;
-//     NetData[1] = Yolo::INPUT_W;
-//     NetData[2] = Yolo::INPUT_H;
-//     NetData[3] = Yolo::MAX_OUTPUT_BBOX_COUNT;
-//     pluginMultidata[0].data = NetData;
-//     pluginMultidata[0].length = 3;
-//     pluginMultidata[0].name = "netdata";
-//     pluginMultidata[0].type = PluginFieldType::kFLOAT32;
-//     int scale[3] = { 8, 16, 32 };
-//     int plugindata[3][10];
-//     std::string names[3];
-//     for (int k = 1; k < 4; k++)
-//     {
-//         plugindata[k - 1][0] = Yolo::INPUT_W / scale[k - 1];
-//         plugindata[k - 1][1] = Yolo::INPUT_H / scale[k - 1];
-//         for (int i = 2; i < 10; i++)
-//         {
-//             plugindata[k - 1][i] = int(anchors_yolo[(k - 1) * 8 + i - 2]);
-//         }
-//         pluginMultidata[k].data = plugindata[k - 1];
-//         pluginMultidata[k].length = 10;
-//         names[k - 1] = "yolodata" + std::to_string(k);
-//         pluginMultidata[k].name = names[k - 1].c_str();
-//         pluginMultidata[k].type = PluginFieldType::kFLOAT32;
-//     }
-//     PluginFieldCollection pluginData;
-//     pluginData.nbFields = 4;
-//     pluginData.fields = pluginMultidata;
-//     IPluginV2 *pluginObj = creator->createPlugin("yololayer", &pluginData);
-//     ITensor* inputTensors_yolo[] = { det2->getOutput(0), det1->getOutput(0), det0->getOutput(0) };
-//     auto yolo = network->addPluginV2(inputTensors_yolo, 3, *pluginObj);
-//     return yolo;
-//     #endif
-
-// }
   IScaleLayer *addBatchNorm2d(INetworkDefinition *network,
                             std::map<std::string, Weights> &weightMap,
                             ITensor &input, std::string lname, float eps) {
@@ -294,7 +251,7 @@ ILayer *convBlock(INetworkDefinition *network,
       network->addElementWise(*mish_tanh->getOutput(0), *bn1->getOutput(0),
                               ElementWiseOperation::kPROD);
 
-  return mish_mul;
+  return mish_mul ;
 }
 
 ILayer *bottleneck(INetworkDefinition *network,
@@ -570,8 +527,6 @@ ICudaEngine *createEngine(const yolov4p5Parameters & params, IBuilder *builder,
       *conv30->getOutput(0), 4 * (params.CLASS_NUM + 5), DimsHW{1, 1},
       weightMap["model.31.m.2.weight"], weightMap["model.31.m.2.bias"]);
 
-#ifndef THEIRS
-// std::cout << "Using our plugin" << std::endl;
   auto flat_anchors = getAnchors(weightMap);
   std::vector<float> anchors0(flat_anchors.begin(),flat_anchors.begin()+8);
   std::vector<float> anchors1(flat_anchors.begin()+8,flat_anchors.begin()+16);
@@ -585,29 +540,15 @@ ICudaEngine *createEngine(const yolov4p5Parameters & params, IBuilder *builder,
 
 
 
-   ITensor* inputTensorsFinal[] = {yolo2->getOutput(0), yolo1->getOutput(0), yolo0->getOutput(0)};
-   auto catFinal = network->addConcatenation(inputTensorsFinal, 3);
+  ITensor* inputTensorsFinal[] = {yolo2->getOutput(0), yolo1->getOutput(0), yolo0->getOutput(0)};
+  auto catFinal = network->addConcatenation(inputTensorsFinal, 3);
   catFinal->getOutput(0)->setName(params.OUTPUT_BLOB_NAME);
   network->markOutput(*catFinal->getOutput(0));
-#endif
 
-// #ifdef THEIRS
-// std::cout << "Using their plugin" << std::endl;
-//    auto yolo = addYoLoLayer(network, weightMap, det0, det1, det2);
-
-// yolo->getOutput(0)->setName(OUTPUT_BLOB_NAME);
-//   network->markOutput(*yolo->getOutput(0));
-//  yolo->getOutput(0)->setName(OUTPUT_BLOB_NAME);
-//   network->markOutput(*yolo->getOutput(0));
-// #endif
-
-//   // Build engine
-//   builder->setMaxBatchSize(params.batch_size);
-//   config->setMaxWorkspaceSize(16 * (1 << 20)); // 16MB
-// #ifdef USE_FP16
-//   config->setFlag(BuilderFlag::kFP16);
-// #endif
   std::cout << "Building engine, please wait for a while..." << std::endl;
+   #ifdef USE_FP16
+        config->setFlag(BuilderFlag::kFP16);
+    #endif
   ICudaEngine *engine = builder->buildEngineWithConfig(*network, *config);
   std::cout << "Build engine successfully!" << std::endl;
 

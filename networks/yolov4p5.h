@@ -549,6 +549,8 @@ ICudaEngine *createEngine(const yolov4p5Parameters & params, IBuilder *builder,
    #ifdef USE_FP16
         config->setFlag(BuilderFlag::kFP16);
     #endif
+  builder->setMaxBatchSize(params.BATCH_SIZE);
+
   ICudaEngine *engine = builder->buildEngineWithConfig(*network, *config);
   std::cout << "Build engine successfully!" << std::endl;
 

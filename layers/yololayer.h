@@ -8,7 +8,8 @@
 #include "math_constants.h"
 #include "NvInfer.h"
 
-#define MAX_ANCHORS 6
+#define MAX_ANCHORS 8
+//TODO make dynamic
 
 #define CHECK(status)                                           \
     do {                                                        \

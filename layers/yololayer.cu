@@ -27,14 +27,17 @@ namespace nvinfer1
     {
         mYoloWidth   = yolo_width;
         mYoloHeight  = yolo_height;
-        mNumAnchors  = num_anchors;
+        mNumAnchors  = num_anchors ;
         memcpy(mAnchorsHost, anchors, num_anchors * 2 * sizeof(float));
         mNumClasses  = num_classes;
         mInputWidth  = input_width;
         mInputHeight = input_height;
         mScaleXY     = scale_x_y;
         mNewCoords   = new_coords;
+    //    std::cout << "anchors " << mNumAnchors  << " " << MAX_ANCHORS*2<<std::endl;
 
+//        for(int i=0; i<num_anchors*2;i++)
+  //          std::cout << anchors[i] << std::endl;
         CHECK(cudaMalloc(&mAnchors, MAX_ANCHORS * 2 * sizeof(float)));
         CHECK(cudaMemcpy(mAnchors, mAnchorsHost, mNumAnchors * 2 * sizeof(float), cudaMemcpyHostToDevice));
     }
@@ -53,13 +56,11 @@ namespace nvinfer1
         read(d, mInputHeight);
         read(d, mScaleXY);
         read(d, mNewCoords);
-
         CHECK(cudaMalloc(&mAnchors, MAX_ANCHORS * 2 * sizeof(float)));
         CHECK(cudaMemcpy(mAnchors, mAnchorsHost, mNumAnchors * 2 * sizeof(float), cudaMemcpyHostToDevice));
 
         assert(d == reinterpret_cast<const char *>(data) + length);
     }
-
     void YoloLayerPlugin::serialize(void* buffer) const TRT_NOEXCEPT
     {
         char* d = static_cast<char*>(buffer);
@@ -67,6 +68,7 @@ namespace nvinfer1
         write(d, mYoloWidth);
         write(d, mYoloHeight);
         write(d, mNumAnchors);
+
         memcpy(d, mAnchorsHost, MAX_ANCHORS * 2 * sizeof(float));
         d += MAX_ANCHORS * 2 * sizeof(float);
         write(d, mNumClasses);
@@ -272,17 +274,18 @@ namespace nvinfer1
                 class_id = i - 5;
             }
         }
-        float box_prob = *(cur_input + 4 * total_grids);
+        float box_prob = sigmoidGPU(*(cur_input + 4 * total_grids));
         //if (max_cls_prob < IGNORE_THRESH || box_prob < IGNORE_THRESH)
         //    return;
 
+        max_cls_prob = sigmoidGPU(max_cls_prob);
         int row = (idx % total_grids) / yolo_width;
         int col = (idx % total_grids) % yolo_width;
 
-        det->bbox[0] = (col + scale(*(cur_input + 0 * total_grids), scale_x_y)) / yolo_width;                   // [0, 1]
-        det->bbox[1] = (row + scale(*(cur_input + 1 * total_grids), scale_x_y)) / yolo_height;                  // [0, 1]
-        det->bbox[2] = square(*(cur_input + 2 * total_grids)) * 4 * *(anchors + 2 * anchor_idx + 0) / input_w;  // [0, 1]
-        det->bbox[3] = square(*(cur_input + 3 * total_grids)) * 4 * *(anchors + 2 * anchor_idx + 1) / input_h;  // [0, 1]
+        det->bbox[0] = (col + scale_sigmoidGPU(*(cur_input + 0 * total_grids), scale_x_y)) / yolo_width;                   // [0, 1]
+        det->bbox[1] = (row + scale_sigmoidGPU(*(cur_input + 1 * total_grids), scale_x_y)) / yolo_height;                  // [0, 1]
+        det->bbox[2] = square(sigmoidGPU(*(cur_input + 2 * total_grids))) * 4 * *(anchors + 2 * anchor_idx + 0) / input_w;  // [0, 1]
+        det->bbox[3] = square(sigmoidGPU(*(cur_input + 3 * total_grids))) * 4 * *(anchors + 2 * anchor_idx + 1) / input_h;  // [0, 1]
 
         det->bbox[0] -= det->bbox[2] / 2;  // shift from center to top-left
         det->bbox[1] -= det->bbox[3] / 2;
